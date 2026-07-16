@@ -6,14 +6,23 @@ from datetime import datetime, timedelta
 # --- 1. CONFIGURACIÓN ---
 st.set_page_config(layout="wide", page_title="Vigilante de Red - Panel")
 
-# Inicialización Firebase (usando Streamlit Secrets)
+# INICIALIZACIÓN DE FIREBASE (Este es el bloque que debes reemplazar)
 if not firebase_admin._apps:
-    key_dict = dict(st.secrets["FIREBASE"])
-    key_dict["private_key"] = key_dict["private_key"].replace("\\n", "\n")
-    cred = credentials.Certificate(key_dict)
-    firebase_admin.initialize_app(cred, {
-        'databaseURL': 'https://vigilante-de-red-default-rtdb.firebaseio.com/'
-    })
+    secrets = st.secrets["FIREBASE"]
+    
+    # Creamos el diccionario asegurando el formato correcto
+    cred_dict = {
+        "type": secrets["type"],
+        "project_id": secrets["project_id"],
+        "private_key_id": secrets["private_key_id"],
+        "private_key": secrets["private_key"].replace("\\n", "\n"),
+        "client_email": secrets["client_email"],
+        "client_id": secrets["client_id"],
+        "auth_uri": secrets["auth_uri"],
+        "token_uri": secrets["token_uri"],
+        "auth_provider_x509_cert_url": secrets["auth_provider_x509_cert_url"],
+        "client_x509_cert_url": secrets["client_x509_cert_url"]
+    }
 
 # --- 2. LÓGICA DE VALIDACIÓN ---
 def obtener_vencimiento(data):
