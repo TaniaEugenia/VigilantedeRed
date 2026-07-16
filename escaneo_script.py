@@ -13,7 +13,6 @@ from firebase_admin import credentials, db
 
 # --- CONFIGURACIÓN ---
 TOKEN_TELEGRAM = '8709241753:AAGBhWXccYJBoP4BQrCbFgeO-YmuyEDGv30'
-CHAT_ID_TELEGRAM = '8640928982'
 WHITELIST_FILE = r"C:\Users\Noxi-PC\Desktop\Vigilante de Red\dispositivos_autorizados.txt"
 MEMORIA_FILE = r"C:\Users\Noxi-PC\Desktop\Vigilante de Red\alertados.txt"
 SUBSCRIPCION_FILE = r"C:\Users\Noxi-PC\Desktop\Vigilante de Red\suscripcion.txt"
@@ -27,100 +26,42 @@ firebase_admin.initialize_app(cred, {
 bot = telebot.TeleBot(TOKEN_TELEGRAM)
 fabricantes_cache = {} 
 
-# --- NUEVA FUNCIÓN: GENERAR CÓDIGO ---
 def generar_codigo():
-    letras_numeros = string.ascii_uppercase + string.digits
-    codigo = "VIG-" + ''.join(random.choices(letras_numeros, k=4))
-    return codigo
+    return "VIG-" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
 
-# --- REGISTRO EN LA NUBE ---
 def registrar_codigo_en_nube(codigo):
     try:
-        ref = db.reference('usuarios')
-        ref.child(codigo).set({
-            'estado': 'pendiente',
-            'fecha_creacion': str(datetime.datetime.now()),
-            'dispositivos': 'esperando_conexion'
+        db.reference(f'usuarios/{codigo}').set({
+            'estado': 'activo',
+            'fecha_creacion': str(datetime.datetime.now())
         })
-        print(f"✅ Código {codigo} registrado en la nube con éxito.")
+        print(f"✅ Código {codigo} registrado en la nube.")
     except Exception as e:
-        print(f"❌ Error al registrar en la nube: {e}")
-
-# --- MEMORIA Y SUSCRIPCIÓN ---
-def cargar_alertados():
-    if os.path.exists(MEMORIA_FILE):
-        with open(MEMORIA_FILE, "r") as f:
-            return set(line.strip() for line in f)
-    return set()
-
-alertados = cargar_alertados()
+        print(f"❌ Error al registrar: {e}")
 
 def verificar_acceso():
-    if not os.path.exists(SUBSCRIPCION_FILE):
-        fecha_fin = datetime.datetime.now() + datetime.timedelta(hours=24)
-        guardar_fecha(fecha_fin)
-        return True
+    if not os.path.exists(SUBSCRIPCION_FILE): return True
     with open(SUBSCRIPCION_FILE, "r") as f:
         try:
-            fecha_fin = datetime.datetime.fromisoformat(f.read().strip())
-            return datetime.datetime.now() < fecha_fin
-        except:
-            return False
+            return datetime.datetime.now() < datetime.datetime.fromisoformat(f.read().strip())
+        except: return False
 
-def guardar_fecha(fecha):
-    with open(SUBSCRIPCION_FILE, "w") as f:
-        f.write(fecha.isoformat())
+# --- LÓGICA TELEGRAM PERSONALIZADA ---
+def enviar_alerta_telegram(ip, mac, fab, codigo):
+    # Buscamos el chat_id del usuario asociado al código
+    usuario_ref = db.reference(f'usuarios/{codigo}').get()
+    chat_id = usuario_ref.get('chat_id') if usuario_ref and 'chat_id' in usuario_ref else None
 
-# --- LÓGICA DE TELEGRAM ---
-@bot.callback_query_handler(func=lambda call: True)
-def callback_query(call):
-    if call.data.startswith("permitir_"):
-        mac = call.data.split("_")[1]
-        msg = bot.send_message(call.message.chat.id, f"✅ Autorizando {mac}. ¿Qué nombre le ponemos?")
-        bot.register_next_step_handler(msg, guardar_nombre_dispositivo, mac)
-    elif call.data == "ignorar":
-        bot.edit_message_text("❌ Intruso ignorado.", call.message.chat.id, call.message.message_id)
-
-@bot.message_handler(commands=['pagar'])
-def enviar_links_pago(message):
-    texto = (
-        "⏳ **Tu acceso ha expirado.**\n\n"
-        "Elige una opción para continuar:\n"
-        "1️⃣ 24 horas extra: $10.000 ARS\n"
-        "🔗 [Pagar 24hs](https://mpago.li/2ATXsjE)\n\n"
-        "2️⃣ 30 días de acceso: $20.000 ARS\n"
-        "🔗 [Pagar 30 días](https://mpago.li/1Kk977E)\n\n"
-        "Una vez realizado el pago, usa /extender [dias] para activar."
-    )
-    bot.reply_to(message, texto, parse_mode="Markdown")
-
-@bot.message_handler(commands=['extender'])
-def comando_extender(message):
-    try:
-        dias = int(message.text.split()[1])
-        fecha_actual = datetime.datetime.now()
-        nueva_fecha = fecha_actual + datetime.timedelta(days=dias)
-        guardar_fecha(nueva_fecha)
-        bot.reply_to(message, f"✅ Acceso extendido por {dias} días exitosamente.")
-    except:
-        bot.reply_to(message, "Error. Usa /extender 1 o /extender 30")
-
-def guardar_nombre_dispositivo(message, mac):
-    usuario_telegram = message.from_user.username or "Usuario"
-    nombre_dispositivo = message.text
-    nombre_final = f"Autorizado por {usuario_telegram} - {nombre_dispositivo}"
-    with open(WHITELIST_FILE, "a") as f:
-        f.write(f"{mac.lower()},{nombre_final}\n")
-    bot.reply_to(message, f"¡Listo! {nombre_final} ha sido guardado.")
-
-def enviar_alerta_telegram(ip, mac, fab):
-    url = f"https://api.telegram.org/bot{TOKEN_TELEGRAM}/sendMessage"
-    texto = (f"🚨 ¡INTRUSO DETECTADO!\n\n📍 IP: {ip}\n🏷️ MAC: {mac}\n⚙️ Fabricante: {fab}\n🔍 Tipo estimado: Dispositivo\n🖥️ Nombre de red: (Sin asignar)")
-    keyboard = {"inline_keyboard": [[{"text": "✅ Permitir y Bautizar", "callback_data": f"permitir_{mac}"}, {"text": "❌ Ignorar", "callback_data": "ignorar"}]]}
-    try:
-        requests.post(url, json={"chat_id": CHAT_ID_TELEGRAM, "text": texto, "reply_markup": keyboard})
-    except Exception as e:
-        print(f"Error Telegram: {e}")
+    if chat_id:
+        url = f"https://api.telegram.org/bot{TOKEN_TELEGRAM}/sendMessage"
+        texto = f"🚨 ¡INTRUSO DETECTADO en red {codigo}!\n\n📍 IP: {ip}\n🏷️ MAC: {mac}\n⚙️ Fabricante: {fab}"
+        keyboard = {"inline_keyboard": [[
+            {"text": "✅ Permitir", "callback_data": f"permitir_{mac}"}, 
+            {"text": "❌ Ignorar", "callback_data": "ignorar"}
+        ]]}
+        requests.post(url, json={"chat_id": chat_id, "text": texto, "reply_markup": keyboard})
+    else:
+        print(f"⚠️ Alerta no enviada: El usuario {codigo} aún no ha iniciado el bot (/start).")
 
 # --- ESCANEO ---
 def cargar_whitelist():
@@ -128,9 +69,7 @@ def cargar_whitelist():
     if os.path.exists(WHITELIST_FILE):
         with open(WHITELIST_FILE, "r") as f:
             for line in f:
-                if "," in line:
-                    mac, _ = line.strip().split(",", 1)
-                    whitelist.add(mac.lower())
+                if "," in line: whitelist.add(line.split(",")[0].strip().lower())
     return whitelist
 
 def obtener_fabricante(mac):
@@ -142,45 +81,38 @@ def obtener_fabricante(mac):
         return nombre
     except: return "Desconocido"
 
-def escanear_red():
+def escanear_red(codigo, alertados):
     whitelist = cargar_whitelist()
-    dispositivos = []
     try:
         subprocess.run("for /L %i in (1,1,254) do @start /b ping -n 1 -w 100 192.168.1.%i >nul", shell=True, timeout=5)
         time.sleep(2)
         resultado = subprocess.check_output("arp -a", shell=True).decode('utf-8', errors='ignore')
-        patron = re.compile(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+([a-f0-9A-F-]{17})")
-        dispositivos = patron.findall(resultado)
+        dispositivos = re.findall(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+([a-f0-9A-F-]{17})", resultado)
+        
+        for ip, mac_raw in dispositivos:
+            mac = mac_raw.replace("-", ":").lower()
+            if not ip.startswith("192.168.1.") or mac.startswith("01:00:5e"): continue
+            
+            if mac not in whitelist and mac not in alertados:
+                alertados.add(mac)
+                with open(MEMORIA_FILE, "a") as f: f.write(f"{mac}\n")
+                threading.Thread(target=enviar_alerta_telegram, args=(ip, mac, obtener_fabricante(mac), codigo)).start()
     except Exception as e:
-        print(f"Error durante el escaneo: {e}")
-        return
+        print(f"Error: {e}")
 
-    for ip, mac_raw in dispositivos:
-        mac = mac_raw.replace("-", ":").lower()
-        if not ip.startswith("192.168.1.") or ip.endswith(".255") or ip.endswith(".0") or mac.startswith("01:00:5e"):
-            continue
-        if mac not in whitelist and mac not in alertados:
-            alertados.add(mac)
-            with open(MEMORIA_FILE, "a") as f:
-                f.write(f"{mac}\n")
-            threading.Thread(target=lambda: enviar_alerta_telegram(ip, mac, obtener_fabricante(mac))).start()
-
-# --- ARRANQUE ---
 if __name__ == "__main__":
     codigo = generar_codigo()
     registrar_codigo_en_nube(codigo)
+    print(f"🔑 TU CÓDIGO: {codigo}")
     
-    print("========================================")
-    print(f"🔑 TU CÓDIGO DE VINCULACIÓN: {codigo}")
-    print("Ingresa este código en nuestra página web.")
-    print("========================================")
-    
+    # Cargar memoria de alertados
+    alertados = set()
+    if os.path.exists(MEMORIA_FILE):
+        with open(MEMORIA_FILE, "r") as f: alertados = set(l.strip() for l in f)
+
     threading.Thread(target=bot.infinity_polling, daemon=True).start()
-    print("Vigilante activo y esperando vinculación...")
     
     while True:
         if verificar_acceso():
-            escanear_red()
-        else:
-            print("Acceso denegado: suscripción vencida.")
+            escanear_red(codigo, alertados)
         time.sleep(30)
