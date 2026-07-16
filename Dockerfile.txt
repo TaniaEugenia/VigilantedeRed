@@ -1,0 +1,15 @@
+# Usamos una versión ligera de Python
+FROM python:3.9-slim
+
+# Establecemos el directorio de trabajo
+WORKDIR /app
+
+# Copiamos los archivos necesarios
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copiamos todo el código
+COPY . .
+
+# Comando para iniciar el bot
+CMD ["python", "bot_alertas.py"]
