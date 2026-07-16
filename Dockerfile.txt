@@ -1,15 +1,10 @@
-# Usamos una versión ligera de Python
-FROM python:3.9-slim
+FROM python:3.10-slim
 
-# Establecemos el directorio de trabajo
-WORKDIR /app
+# Cambiamos el directorio de trabajo a la subcarpeta donde realmente están los archivos
+WORKDIR /app/Vigilante de Red
 
-# Copiamos los archivos necesarios
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copiamos todo el código
 COPY . .
 
-# Comando para iniciar el bot
+RUN pip install --no-cache-dir -r requirements.txt
+
 CMD ["python", "bot_alertas.py"]
