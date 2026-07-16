@@ -1,0 +1,4 @@
+serviceAccountKey.json
+*.exe
+__pycache__/
+*.toml
