@@ -2,14 +2,17 @@ import time
 import requests
 import threading
 import firebase_admin
+import os
+import json
 from firebase_admin import credentials, db
 
 # --- CONFIGURACIÓN ---
 TOKEN_TELEGRAM = '8709241753:AAGBhWXccYJBoP4BQrCbFgeO-YmuyEDGv30'
 
-# Inicializar Firebase
-# Asegúrate de tener el archivo serviceAccountKey.json en la raíz de tu proyecto
-cred = credentials.Certificate("serviceAccountKey.json")
+# --- INICIALIZAR FIREBASE DESDE VARIABLE DE ENTORNO ---
+# Asegúrate de tener la variable FIREBASE_CREDENTIALS en la pestaña Variables de Railway
+cred_json = json.loads(os.getenv("FIREBASE_CREDENTIALS"))
+cred = credentials.Certificate(cred_json)
 firebase_admin.initialize_app(cred, {
     'databaseURL': 'https://vigilante-de-red-default-rtdb.firebaseio.com/'
 })
@@ -24,9 +27,7 @@ def escuchar_firebase():
     ref = db.reference('usuarios')
     
     def callback(event):
-        # Escucha cambios en dispositivos_detectados
         if event.data and isinstance(event.data, dict) and event.data.get('es_intruso'):
-            # Obtenemos el ID del usuario/código
             codigo = event.path.split('/')[1]
             usuario_ref = db.reference(f'usuarios/{codigo}').get()
             
@@ -56,7 +57,6 @@ def procesar_actualizaciones():
                         chat_id = msg["chat"]["id"]
                         texto = msg["text"]
                         
-                        # Comando para vincular usuario
                         if texto.startswith("/start"):
                             partes = texto.split(" ")
                             if len(partes) > 1:
@@ -72,7 +72,5 @@ def procesar_actualizaciones():
         time.sleep(1)
 
 if __name__ == "__main__":
-    # Ejecutamos el listener de Firebase en segundo plano
     threading.Thread(target=escuchar_firebase, daemon=True).start()
-    # Ejecutamos el bot en el hilo principal
     procesar_actualizaciones()
