@@ -25,50 +25,42 @@ def enviar_mensaje(chat_id, texto, reply_markup=None):
 
 # --- LISTENER DE ALERTAS (VIGILANTE ACTIVO) ---
 def escuchar_firebase():
-    print("📡 Escuchando intrusos en Firebase...")
-    ref = db.reference('usuarios')
-    
     def callback(event):
-        # Si hay datos nuevos en la base de datos
-        if event.data and isinstance(event.data, dict):
-            for codigo, datos in event.data.items():
-                intrusos = datos.get('dispositivos_detectados', {})
-                chat_id = datos.get('chat_id')
-                
-                if chat_id and isinstance(intrusos, dict):
-                    for mac, disp in intrusos.items():
-                        # --- FORMATEO VISUAL ADAPTADO A LA IMAGEN (image_8a89a0.png) ---
-                        # Usamos emojis de Telegram como iconos y Markdown para formato
-                        ip_str = disp.get('ip', 'N/A')
-                        fabricante_str = disp.get('fabricante', 'Desconocido')
-                        tipo_str = disp.get('tipo', 'Dispositivo desconocido')
+        intrusos = event.data
+        # Asumiendo que chat_id es una variable global o configurada previamente
+        if chat_id and isinstance(intrusos, dict):
+            for mac, disp in intrusos.items():
+                ip_str = disp.get('ip', 'N/A')
+                fabricante_str = disp.get('fabricante', 'Desconocido')
+                tipo_str = disp.get('tipo', 'Dispositivo desconocido')
 
-                        mensaje = (
-                            f"🚨 *¡INTRUSO DETECTADO!* 🚨\n\n"
-                            f"📍 *IP:* `{ip_str}`\n"
-                            f"🏷 *MAC:* `{mac}`\n"
-                            f"⚙️ *Fabricante:* {fabricante_str}\n"
-                            f"🔍 *Tipo estimado:* {tipo_str}\n"
-                            f"🖥 *Nombre de red:* (Sin asignar)\n\n"
-                            f"¿Querés darle permiso de acceso a tu red?"
-                        )
-                        
-                        # Botones interactivos (Inline Keyboard)
-                        markup = {
-                            "inline_keyboard": [[
-                                {
-                                    "text": "✅ Permitir y Bautizar",
-                                    "callback_data": f"permitir_{mac}_{ip_str}"
-                                },
-                                {
-                                    "text": "❌ Ignorar",
-                                    "callback_data": f"ignorar_{mac}"
-                                }
-                            ]]
+                # Mensaje limpio con formato Markdown
+                mensaje = (
+                    f"🚨 *¡INTRUSO DETECTADO!* 🚨\n\n"
+                    f"📍 *IP:* `{ip_str}`\n"
+                    f"🏷 *MAC:* `{mac}`\n"
+                    f"⚙️ *Fabricante:* {fabricante_str}\n"
+                    f"🔍 *Tipo estimado:* {tipo_str}\n"
+                    f"🖥 *Nombre de red:* (Sin asignar)\n\n"
+                    f"¿Querés darle permiso de acceso a tu red?"
+                )
+                
+                # Markup corregido con la coma necesaria entre los diccionarios de botones
+                markup = {
+                    "inline_keyboard": [[
+                        {
+                            "text": "✅ Permitir y Bautizar", 
+                            "callback_data": f"permitir_{mac}_{ip_str}"
+                        },
+                        {
+                            "text": "❌ Ignorar", 
+                            "callback_data": f"ignorar_{mac}"
                         }
-                        
-                        # IMPORTANTE: Asegúrate de que tu función enviar_mensaje acepte el parámetro parse_mode
-                        enviar_mensaje(chat_id, mensaje, reply_markup=markup, parse_mode='Markdown')
+                    ]]
+                }
+                
+                # Envío final asegurando el parse_mode para el Markdown
+                enviar_mensaje(chat_id, mensaje, reply_markup=markup, parse_mode='Markdown')
 
     ref.listen(callback)
 
