@@ -37,24 +37,38 @@ def escuchar_firebase():
                 
                 if chat_id and isinstance(intrusos, dict):
                     for mac, disp in intrusos.items():
-                        # Formato visual solicitado
+                        # --- FORMATEO VISUAL ADAPTADO A LA IMAGEN (image_8a89a0.png) ---
+                        # Usamos emojis de Telegram como iconos y Markdown para formato
+                        ip_str = disp.get('ip', 'N/A')
+                        fabricante_str = disp.get('fabricante', 'Desconocido')
+                        tipo_str = disp.get('tipo', 'Dispositivo desconocido')
+
                         mensaje = (
-                            f"🚨 ¡INTRUSO DETECTADO!\n\n"
-                            f"📍 IP: {disp.get('ip', 'N/A')}\n"
-                            f"🏷 MAC: {mac}\n"
-                            f"⚙️ Fabricante: {disp.get('fabricante', 'Desconocido')}\n"
-                            f"🔍 Tipo estimado: {disp.get('tipo', 'Dispositivo')}\n"
-                            f"🖥 Nombre de red: (Sin asignar)"
+                            f"🚨 *¡INTRUSO DETECTADO!* 🚨\n\n"
+                            f"📍 *IP:* `{ip_str}`\n"
+                            f"🏷 *MAC:* `{mac}`\n"
+                            f"⚙️ *Fabricante:* {fabricante_str}\n"
+                            f"🔍 *Tipo estimado:* {tipo_str}\n"
+                            f"🖥 *Nombre de red:* (Sin asignar)\n\n"
+                            f"¿Querés darle permiso de acceso a tu red?"
                         )
                         
-                        # Botones interactivos
+                        # Botones interactivos (Inline Keyboard)
                         markup = {
                             "inline_keyboard": [[
-                                {"text": "✅ Permitir y Bautizar", "callback_data": f"permitir_{mac}_{disp.get('ip')}"},
-                                {"text": "❌ Ignorar", "callback_data": f"ignorar_{mac}"}
+                                {
+                                    "text": "✅ Permitir y Bautizar",
+                                    "callback_data": f"permitir_{mac}_{ip_str}"
+                                },
+                                {
+                                    "text": "❌ Ignorar",
+                                    "callback_data": f"ignorar_{mac}"
+                                }
                             ]]
                         }
-                        enviar_mensaje(chat_id, mensaje, reply_markup=markup)
+                        
+                        # IMPORTANTE: Asegúrate de que tu función enviar_mensaje acepte el parámetro parse_mode
+                        enviar_mensaje(chat_id, mensaje, reply_markup=markup, parse_mode='Markdown')
 
     ref.listen(callback)
 
