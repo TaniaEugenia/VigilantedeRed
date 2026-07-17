@@ -34,7 +34,7 @@ def obtener_vencimiento(data):
         inicio = datetime.now()
     return inicio + timedelta(hours=24) # Ajusta según tu lógica de suscripción
 
-# --- 3. PANEL DE CONTROL ---
+# --- 3. PANEL DE CONTROL (MODIFICADO) ---
 st.title("🛡️ VIGILANTE DE RED - PANEL DE CONTROL")
 
 codigo_usuario = st.text_input("Ingrese el código VIG-XXXX para monitorear").upper()
@@ -44,23 +44,21 @@ if codigo_usuario:
     usuario_data = ref.get()
     
     if usuario_data:
-        # Métricas de estado
-        col1, col2 = st.columns(2)
-        col1.metric("Estado", "🟢 ACTIVO")
-        col2.metric("Red", codigo_usuario)
-        
-        # Visualización de intrusos
+        st.metric("Estado", "🟢 ACTIVO")
         st.subheader("📋 Estado de la Red")
-        # Buscamos en la ruta que usa el .exe: dispositivos_detectados
+        
         dispositivos = usuario_data.get('dispositivos_detectados', {})
         
         if dispositivos:
             for mac, info in dispositivos.items():
                 mac_formateada = mac.replace("_", ":")
+                # Obtenemos el nombre bautizado si existe, sino usamos "Desconocido"
+                nombre_dispositivo = info.get('nombre_bautizado', "Dispositivo sin nombre")
+                
                 if info.get('es_intruso'):
-                    st.error(f"🚨 INTRUSO DETECTADO | IP: {info.get('ip')} | MAC: `{mac_formateada}`")
+                    st.error(f"🚨 INTRUSO DETECTADO: {nombre_dispositivo} | IP: {info.get('ip')} | MAC: `{mac_formateada}`")
                 else:
-                    st.success(f"✅ Dispositivo Confiable | MAC: `{mac_formateada}`")
+                    st.success(f"✅ Confiable: {nombre_dispositivo} | MAC: `{mac_formateada}`")
         else:
             st.warning("Esperando reporte del escáner en la red...")
     else:
