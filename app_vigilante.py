@@ -6,11 +6,6 @@ from datetime import datetime, timedelta
 # 1. CONFIGURACIÓN (DEBE IR ANTES DE CUALQUIER OTRA COSA)
 st.set_page_config(layout="black", page_title="Vigilante de Red - Panel")
 
-Para lograr que todo tenga un acabado oscuro profesional, vamos a ajustar el CSS para que los textos sean blancos, la barra de entrada de código sea negra, y los botones de pago mantengan su diseño claro con letras negras para que se vean bien.
-
-Actualiza tu bloque CSS con este código:
-
-Python
 # --- ESTILO FINAL OSCURO ---
 page_bg_img = """
 <style>
