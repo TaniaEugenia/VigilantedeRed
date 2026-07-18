@@ -3,12 +3,31 @@ import firebase_admin
 from firebase_admin import credentials, db
 from datetime import datetime, timedelta
 
-# --- FONDO PERSONALIZADO ---
+# --- ESTILO OSCURO PERSONALIZADO ---
 page_bg_img = """
 <style>
+/* Fondo principal */
 [data-testid="stAppViewContainer"] {
     background-image: url("https://i.imgur.com/3YmgikW.png");
     background-size: cover;
+}
+
+/* Barra lateral oscura */
+[data-testid="stSidebar"] {
+    background-color: #121212;
+    border-right: 1px solid #333;
+}
+
+/* Contenedor principal de entrada (donde se carga el código) */
+[data-testid="stTextInput"] > div > div > input {
+    background-color: #1e1e1e !important;
+    color: white !important;
+    border: 1px solid #444 !important;
+}
+
+/* Ajuste de texto para que se lea bien sobre el fondo oscuro */
+h1, h2, h3, p, label {
+    color: white !important;
 }
 </style>
 """
