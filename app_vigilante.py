@@ -4,19 +4,40 @@ from firebase_admin import credentials, db
 from datetime import datetime, timedelta
 
 # 1. CONFIGURACIÓN (DEBE IR ANTES DE CUALQUIER OTRA COSA)
-st.set_page_config(layout="wide", page_title="Vigilante de Red - Panel")
+st.set_page_config(layout="black", page_title="Vigilante de Red - Panel")
 
-# --- ESTILOS CSS ---
+Para lograr que todo tenga un acabado oscuro profesional, vamos a ajustar el CSS para que los textos sean blancos, la barra de entrada de código sea negra, y los botones de pago mantengan su diseño claro con letras negras para que se vean bien.
+
+Actualiza tu bloque CSS con este código:
+
+Python
+# --- ESTILO FINAL OSCURO ---
 page_bg_img = """
 <style>
+/* Fondo principal */
 [data-testid="stAppViewContainer"] {
     background-image: url("https://i.imgur.com/3YmgikW.png");
     background-size: cover;
 }
+
+/* Barra lateral negra */
 [data-testid="stSidebar"] {
-    background-color: #121212;
+    background-color: #000000 !important;
 }
-/* Estilo para los botones de pago personalizados */
+
+/* Texto general en la barra lateral y resto de la app en blanco */
+[data-testid="stSidebar"] *, h1, h2, h3, p, label, .stMarkdown {
+    color: white !important;
+}
+
+/* Barra de carga de código: Fondo negro, borde gris y texto blanco */
+[data-testid="stTextInput"] > div > div > input {
+    background-color: #000000 !important;
+    color: white !important;
+    border: 1px solid #444 !important;
+}
+
+/* Botones de pago: Mantienen el fondo claro para contraste y texto NEGRO */
 .btn-mp {
     background-color: #f0f2f6 !important;
     color: black !important;
@@ -30,7 +51,6 @@ page_bg_img = """
     border: 1px solid #ccc;
 }
 .btn-mp:hover { background-color: #e0e0e0 !important; }
-h1, h2, h3, p, label { color: white !important; }
 </style>
 """
 st.markdown(page_bg_img, unsafe_allow_html=True)
