@@ -27,41 +27,38 @@ def enviar_mensaje(chat_id, texto, reply_markup=None):
 def escuchar_firebase():
     def callback(event):
         intrusos = event.data
-        # Asumiendo que chat_id es una variable global o configurada previamente
         if chat_id and isinstance(intrusos, dict):
             for mac, disp in intrusos.items():
-                ip_str = disp.get('ip', 'N/A')
-                fabricante_str = disp.get('fabricante', 'Desconocido')
-                tipo_str = disp.get('tipo', 'Dispositivo desconocido')
-
-                # Mensaje limpio con formato Markdown
-                mensaje = (
-                    f"🚨 *¡INTRUSO DETECTADO!* 🚨\n\n"
-                    f"📍 *IP:* `{ip_str}`\n"
-                    f"🏷 *MAC:* `{mac}`\n"
-                    f"⚙️ *Fabricante:* {fabricante_str}\n"
-                    f"🔍 *Tipo estimado:* {tipo_str}\n"
-                    f"🖥 *Nombre de red:* (Sin asignar)\n\n"
-                    f"¿Querés darle permiso de acceso a tu red?"
-                )
                 
-                # Markup corregido con la coma necesaria entre los diccionarios de botones
-                markup = {
-                    "inline_keyboard": [[
-                        {
-                            "text": "✅ Permitir y Bautizar", 
-                            "callback_data": f"permitir_{mac}_{ip_str}"
-                        },
-                        {
-                            "text": "❌ Ignorar", 
-                            "callback_data": f"ignorar_{mac}"
-                        }
-                    ]]
-                }
+                # --- FILTRO DE SEGURIDAD ---
+                # Solo alertamos si es intruso Y no tiene nombre asignado (bautizado)
+                es_intruso = disp.get('es_intruso', False)
+                nombre_bautizado = disp.get('nombre_bautizado')
                 
-                # Envío final asegurando el parse_mode para el Markdown
-                enviar_mensaje(chat_id, mensaje, reply_markup=markup, parse_mode='Markdown')
+                if es_intruso and not nombre_bautizado:
+                    # Si pasa los filtros, preparamos el mensaje
+                    ip_str = disp.get('ip', 'N/A')
+                    fabricante_str = disp.get('fabricante', 'Desconocido')
+                    tipo_str = disp.get('tipo', 'Dispositivo desconocido')
 
+                    mensaje = (
+                        f"🚨 *¡INTRUSO DETECTADO!* 🚨\n\n"
+                        f"📍 *IP:* `{ip_str}`\n"
+                        f"🏷 *MAC:* `{mac.replace('_', ':')}`\n"
+                        f"⚙️ *Fabricante:* {fabricante_str}\n"
+                        f"🔍 *Tipo estimado:* {tipo_str}\n\n"
+                        f"¿Querés darle permiso de acceso a tu red?"
+                    )
+                    
+                    markup = {
+                        "inline_keyboard": [[
+                            {"text": "✅ Permitir y Bautizar", "callback_data": f"permitir_{mac}_{ip_str}"},
+                            {"text": "❌ Ignorar", "callback_data": f"ignorar_{mac}"}
+                        ]]
+                    }
+                    
+                    enviar_mensaje(chat_id, mensaje, reply_markup=markup, parse_mode='Markdown')
+                
     ref.listen(callback)
 
 # --- PROCESAMIENTO COMANDOS BOT ---

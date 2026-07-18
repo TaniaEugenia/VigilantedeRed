@@ -3,6 +3,21 @@ import firebase_admin
 from firebase_admin import credentials, db
 from datetime import datetime, timedelta
 
+# --- FONDO PERSONALIZADO ---
+page_bg_img = """
+<style>
+[data-testid="stAppViewContainer"] {
+    background-image: url("https://i.imgur.com/3YmgikW.png");
+    background-size: cover;
+}
+</style>
+"""
+st.markdown(page_bg_img, unsafe_allow_html=True)
+
+# --- 1. CONFIGURACIÓN ---
+st.set_page_config(layout="wide", page_title="Vigilante de Red - Panel")
+...
+
 # --- 1. CONFIGURACIÓN ---
 st.set_page_config(layout="wide", page_title="Vigilante de Red - Panel")
 
@@ -52,13 +67,24 @@ if codigo_usuario:
         if dispositivos:
             for mac, info in dispositivos.items():
                 mac_formateada = mac.replace("_", ":")
-                # Obtenemos el nombre bautizado si existe, sino usamos "Desconocido"
                 nombre_dispositivo = info.get('nombre_bautizado', "Dispositivo sin nombre")
                 
+                # Crear columnas para alinear el estado y el botón
+                col1, col2 = st.columns([3, 1])
+                
                 if info.get('es_intruso'):
-                    st.error(f"🚨 INTRUSO DETECTADO: {nombre_dispositivo} | IP: {info.get('ip')} | MAC: `{mac_formateada}`")
+                    col1.error(f"🚨 INTRUSO: {nombre_dispositivo} | IP: {info.get('ip')} | MAC: `{mac_formateada}`")
                 else:
-                    st.success(f"✅ Confiable: {nombre_dispositivo} | MAC: `{mac_formateada}`")
+                    col1.success(f"✅ Confiable: {nombre_dispositivo} | MAC: `{mac_formateada}`")
+                
+                # Botón para borrar/desbautizar
+                if col2.button("🗑️ Borrar", key=f"btn_{mac}"):
+                    # Lógica para borrar en Firebase
+                    # Si quieres borrar el nombre, usamos .update({None})
+                    # Si quieres eliminar el nodo del dispositivo, usaríamos .delete()
+                    db.reference(f'usuarios/{codigo_usuario}/dispositivos_detectados/{mac}/nombre_bautizado').delete()
+                    db.reference(f'usuarios/{codigo_usuario}/dispositivos_detectados/{mac}/es_intruso').set(True) # Lo marcamos como intruso para que vuelva a alertar
+                    st.rerun() # Refrescamos para mostrar el cambio al instante
         else:
             st.warning("Esperando reporte del escáner en la red...")
     else:
