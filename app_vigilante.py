@@ -2,8 +2,6 @@ import streamlit as st
 import firebase_admin
 from firebase_admin import credentials, db
 from datetime import datetime, timedelta
-# 1. CONFIGURACIÓN (DEBE IR ANTES DE CUALQUIER OTRA COSA)
-st.set_page_config(layout="white", page_title="Vigilante de Red - Panel")
 
 # --- ESTILO FINAL OSCURO ---
 page_bg_img = """
@@ -66,6 +64,10 @@ if not firebase_admin._apps:
     }
     cred = credentials.Certificate(cred_dict)
     firebase_admin.initialize_app(cred, {'databaseURL': 'https://vigilante-de-red-default-rtdb.firebaseio.com/'})
+
+
+# 1. CONFIGURACIÓN (DEBE IR ANTES DE CUALQUIER OTRA COSA)
+st.set_page_config(layout="white", page_title="Vigilante de Red - Panel")
 
 # --- PANEL DE CONTROL ---
 st.title("🛡️ VIGILANTE DE RED - PANEL DE CONTROL")
