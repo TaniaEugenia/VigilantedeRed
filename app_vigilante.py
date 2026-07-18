@@ -28,10 +28,10 @@ page_bg_img = """
     color: white !important;
     border: 1px solid #444 !important;
 }
-/* Botones de pago */
+/* Botones de pago: Fondo gris oscuro con texto BLANCO */
 .btn-mp {
-    background-color: #f0f2f6 !important;
-    color: black !important;
+    background-color: #333333 !important;
+    color: white !important;
     padding: 10px;
     border-radius: 8px;
     text-decoration: none;
@@ -39,9 +39,9 @@ page_bg_img = """
     text-align: center;
     font-weight: bold;
     margin-bottom: 10px;
-    border: 1px solid #ccc;
+    border: 1px solid #555;
 }
-.btn-mp:hover { background-color: #e0e0e0 !important; }
+.btn-mp:hover { background-color: #444444 !important; }
 </style>
 """
 st.markdown(page_bg_img, unsafe_allow_html=True)
