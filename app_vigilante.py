@@ -12,20 +12,27 @@ page_bg_img = """
     background-size: cover;
 }
 
-/* Barra lateral oscura */
+/* Barra lateral principal (fondo más oscuro) */
 [data-testid="stSidebar"] {
     background-color: #121212;
-    border-right: 1px solid #333;
 }
 
-/* Contenedor principal de entrada (donde se carga el código) */
+/* Zona de botones: aplicamos un tono gris un poco más claro (#1e1e1e) 
+   al contenedor dentro de la barra lateral */
+[data-testid="stSidebar"] section > div > div {
+    background-color: #1e1e1e;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+/* Entrada de código */
 [data-testid="stTextInput"] > div > div > input {
     background-color: #1e1e1e !important;
     color: white !important;
     border: 1px solid #444 !important;
 }
 
-/* Ajuste de texto para que se lea bien sobre el fondo oscuro */
+/* Ajuste de texto */
 h1, h2, h3, p, label {
     color: white !important;
 }
