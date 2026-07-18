@@ -3,36 +3,33 @@ import firebase_admin
 from firebase_admin import credentials, db
 from datetime import datetime, timedelta
 
-# --- ESTILO OSCURO PERSONALIZADO ---
+# --- ESTILO OSCURO UNIFORME ---
 page_bg_img = """
 <style>
-/* Fondo principal */
+/* Fondo principal de la página */
 [data-testid="stAppViewContainer"] {
-    background-image: url("https://i.imgur.com/3YmgikW.png");
+    background-image: url("https://images.unsplash.com/photo-1550751827-4bd374c3f58b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80");
     background-size: cover;
 }
 
-/* Barra lateral principal (fondo más oscuro) */
+/* Aplicamos el tono gris oscuro a TODO el panel lateral */
 [data-testid="stSidebar"] {
-    background-color: #121212;
+    background-color: #1e1e1e !important;
 }
 
-/* Zona de botones: aplicamos un tono gris un poco más claro (#1e1e1e) 
-   al contenedor dentro de la barra lateral */
-[data-testid="stSidebar"] section > div > div {
-    background-color: #1e1e1e;
-    padding: 10px;
-    border-radius: 8px;
+/* Aseguramos que el texto sea blanco sobre el fondo gris */
+[data-testid="stSidebar"] * {
+    color: white !important;
 }
 
 /* Entrada de código */
 [data-testid="stTextInput"] > div > div > input {
-    background-color: #1e1e1e !important;
+    background-color: #121212 !important;
     color: white !important;
     border: 1px solid #444 !important;
 }
 
-/* Ajuste de texto */
+/* Ajuste de títulos generales */
 h1, h2, h3, p, label {
     color: white !important;
 }
