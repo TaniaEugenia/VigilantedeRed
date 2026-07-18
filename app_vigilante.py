@@ -3,33 +3,43 @@ import firebase_admin
 from firebase_admin import credentials, db
 from datetime import datetime, timedelta
 
-# --- ESTILO OSCURO UNIFORME ---
+# --- ESTILO CORREGIDO PARA BOTONES ---
 page_bg_img = """
 <style>
-/* Fondo principal de la página */
+/* Fondo principal */
 [data-testid="stAppViewContainer"] {
-    background-image: url("https://i.imgur.com/3YmgikW.png");
+    background-image: url("https://images.unsplash.com/photo-1550751827-4bd374c3f58b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80");
     background-size: cover;
 }
 
-/* Aplicamos el tono gris oscuro a TODO el panel lateral */
+/* Barra lateral */
 [data-testid="stSidebar"] {
-    background-color: #1e1e1e !important;
+    background-color: #121212;
 }
 
-/* Aseguramos que el texto sea blanco sobre el fondo gris */
-[data-testid="stSidebar"] * {
-    color: white !important;
+/* Estilo para los botones (los que están blancos) */
+div.stButton > button {
+    background-color: #f0f2f6 !important; /* Fondo gris claro */
+    color: #000000 !important;           /* Texto NEGRO para que se lea siempre */
+    font-weight: bold;
+    border-radius: 8px !important;
+    border: none !important;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.3); /* Sombra para efecto 3D */
+}
+
+/* Efecto al pasar el mouse */
+div.stButton > button:hover {
+    background-color: #e0e0e0 !important;
+    color: #000000 !important;
 }
 
 /* Entrada de código */
 [data-testid="stTextInput"] > div > div > input {
-    background-color: #121212 !important;
+    background-color: #1e1e1e !important;
     color: white !important;
     border: 1px solid #444 !important;
 }
 
-/* Ajuste de títulos generales */
 h1, h2, h3, p, label {
     color: white !important;
 }
