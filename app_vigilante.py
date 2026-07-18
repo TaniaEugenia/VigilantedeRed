@@ -2,6 +2,8 @@ import streamlit as st
 import firebase_admin
 from firebase_admin import credentials, db
 from datetime import datetime, timedelta
+# 1. CONFIGURACIÓN (DEBE IR ANTES DE CUALQUIER OTRA COSA)
+st.set_page_config(layout="white", page_title="Vigilante de Red - Panel")
 
 # --- ESTILO FINAL OSCURO ---
 page_bg_img = """
@@ -46,9 +48,6 @@ page_bg_img = """
 </style>
 """
 st.markdown(page_bg_img, unsafe_allow_html=True)
-
-# 1. CONFIGURACIÓN (DEBE IR ANTES DE CUALQUIER OTRA COSA)
-st.set_page_config(layout="white", page_title="Vigilante de Red - Panel")
 
 # INICIALIZACIÓN DE FIREBASE
 if not firebase_admin._apps:
@@ -104,6 +103,5 @@ if codigo_usuario:
 with st.sidebar:
     st.subheader("Gestión de Acceso")
     logo_mp = "https://images.seeklogo.com/logo-png/19/1/mercadopago-logo-png_seeklogo-199533.png"
-    
-    st.markdown(f'<a href="https://mpago.li/2ATXsjE" class="btn-mp"><img src="{logo_mp}" width="20" style="vertical-align:middle"> Pagar 24hs ($10.000)</a>', unsafe_allow_html=True)
+        st.markdown(f'<a href="https://mpago.li/2ATXsjE" class="btn-mp"><img src="{logo_mp}" width="20" style="vertical-align:middle"> Pagar 24hs ($10.000)</a>', unsafe_allow_html=True)
     st.markdown(f'<a href="https://mpago.li/1Kk977E" class="btn-mp"><img src="{logo_mp}" width="20" style="vertical-align:middle"> Pagar 30 días ($20.000)</a>', unsafe_allow_html=True)
