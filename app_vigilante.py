@@ -3,6 +3,9 @@ import firebase_admin
 from firebase_admin import credentials, db
 from datetime import datetime, timedelta
 
+# 1. CONFIGURACIÓN (DEBE SER LO PRIMERO)
+st.set_page_config(layout="wide", page_title="Vigilante de Red - Panel")
+
 # --- ESTILO FINAL OSCURO ---
 page_bg_img = """
 <style>
@@ -11,25 +14,21 @@ page_bg_img = """
     background-image: url("https://i.imgur.com/3YmgikW.png");
     background-size: cover;
 }
-
 /* Barra lateral negra */
 [data-testid="stSidebar"] {
     background-color: #000000 !important;
 }
-
-/* Texto general en la barra lateral y resto de la app en blanco */
+/* Texto general en blanco */
 [data-testid="stSidebar"] *, h1, h2, h3, p, label, .stMarkdown {
     color: white !important;
 }
-
-/* Barra de carga de código: Fondo negro, borde gris y texto blanco */
+/* Barra de carga de código negra */
 [data-testid="stTextInput"] > div > div > input {
     background-color: #000000 !important;
     color: white !important;
     border: 1px solid #444 !important;
 }
-
-/* Botones de pago: Mantienen el fondo claro para contraste y texto NEGRO */
+/* Botones de pago */
 .btn-mp {
     background-color: #f0f2f6 !important;
     color: black !important;
@@ -65,10 +64,6 @@ if not firebase_admin._apps:
     cred = credentials.Certificate(cred_dict)
     firebase_admin.initialize_app(cred, {'databaseURL': 'https://vigilante-de-red-default-rtdb.firebaseio.com/'})
 
-
-# 1. CONFIGURACIÓN (DEBE IR ANTES DE CUALQUIER OTRA COSA)
-st.set_page_config(layout="white", page_title="Vigilante de Red - Panel")
-
 # --- PANEL DE CONTROL ---
 st.title("🛡️ VIGILANTE DE RED - PANEL DE CONTROL")
 codigo_usuario = st.text_input("Ingrese el código VIG-XXXX para monitorear").upper()
@@ -101,9 +96,9 @@ if codigo_usuario:
     else:
         st.error("Código no encontrado en el sistema.")
 
-# --- BARRA LATERAL CON LOGO MERCADO PAGO ---
+# --- BARRA LATERAL ---
 with st.sidebar:
     st.subheader("Gestión de Acceso")
     logo_mp = "https://images.seeklogo.com/logo-png/19/1/mercadopago-logo-png_seeklogo-199533.png"
-        st.markdown(f'<a href="https://mpago.li/2ATXsjE" class="btn-mp"><img src="{logo_mp}" width="20" style="vertical-align:middle"> Pagar 24hs ($10.000)</a>', unsafe_allow_html=True)
+    st.markdown(f'<a href="https://mpago.li/2ATXsjE" class="btn-mp"><img src="{logo_mp}" width="20" style="vertical-align:middle"> Pagar 24hs ($10.000)</a>', unsafe_allow_html=True)
     st.markdown(f'<a href="https://mpago.li/1Kk977E" class="btn-mp"><img src="{logo_mp}" width="20" style="vertical-align:middle"> Pagar 30 días ($20.000)</a>', unsafe_allow_html=True)
