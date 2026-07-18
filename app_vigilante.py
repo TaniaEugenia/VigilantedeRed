@@ -3,9 +3,6 @@ import firebase_admin
 from firebase_admin import credentials, db
 from datetime import datetime, timedelta
 
-# 1. CONFIGURACIÓN (DEBE IR ANTES DE CUALQUIER OTRA COSA)
-st.set_page_config(layout="black", page_title="Vigilante de Red - Panel")
-
 # --- ESTILO FINAL OSCURO ---
 page_bg_img = """
 <style>
@@ -49,6 +46,9 @@ page_bg_img = """
 </style>
 """
 st.markdown(page_bg_img, unsafe_allow_html=True)
+
+# 1. CONFIGURACIÓN (DEBE IR ANTES DE CUALQUIER OTRA COSA)
+st.set_page_config(layout="white", page_title="Vigilante de Red - Panel")
 
 # INICIALIZACIÓN DE FIREBASE
 if not firebase_admin._apps:
