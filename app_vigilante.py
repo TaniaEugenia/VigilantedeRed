@@ -8,7 +8,7 @@ page_bg_img = """
 <style>
 /* Fondo principal de la página */
 [data-testid="stAppViewContainer"] {
-    background-image: url("https://images.unsplash.com/photo-1550751827-4bd374c3f58b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80");
+    background-image: url("https://i.imgur.com/3YmgikW.png");
     background-size: cover;
 }
 
