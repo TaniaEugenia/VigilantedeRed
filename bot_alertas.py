@@ -17,12 +17,6 @@ firebase_admin.initialize_app(cred, {'databaseURL': 'https://vigilante-de-red-de
 esperando_nombre = {} # {chat_id: mac}
 usuario_vinculado = {} # {chat_id: codigo}
 
-def enviar_mensaje(chat_id, texto, reply_markup=None, parse_mode='Markdown'):
-    url = f"https://api.telegram.org/bot{TOKEN_TELEGRAM}/sendMessage"
-    payload = {"chat_id": chat_id, "text": texto, "parse_mode": parse_mode}
-    if reply_markup: payload["reply_markup"] = reply_markup
-    requests.post(url, json=payload)
-
 def escuchar_firebase():
     def callback(event):
         if not event.data or not isinstance(event.data, dict): return
@@ -33,14 +27,26 @@ def escuchar_firebase():
             dispositivos = datos_usuario.get('dispositivos_detectados', {})
             for mac, disp in dispositivos.items():
                 if disp.get('es_intruso') and not disp.get('nombre_bautizado'):
-                    mensaje = (f"🚨 *¡INTRUSO DETECTADO!* 🚨\n📍 IP: `{disp.get('ip')}`\n"
-                               f"🏷 *MAC:* `{mac.replace('_', ':')}`\n⚙️ {disp.get('fabricante')}")
+                    # Formato mejorado igual a tu segunda foto
+                    mensaje = (
+                        f"🚨 *¡INTRUSO DETECTADO!* 🚨\n\n"
+                        f"📍 *IP:* `{disp.get('ip')}`\n"
+                        f"🏷 *MAC:* `{mac.replace('_', ':')}`\n"
+                        f"⚙️ *Fabricante:* {disp.get('fabricante', 'Desconocido')}\n"
+                        f"🔍 *Tipo estimado:* {disp.get('tipo', 'Desconocido')}\n\n"
+                        f"¿Querés darle permiso de acceso a tu red?"
+                    )
+                    
+                    # Dos botones: Permitir y Ignorar
                     markup = {"inline_keyboard": [[
-                        {"text": "✅ Permitir y Bautizar", "callback_data": f"permitir_{codigo}_{mac}"}
+                        {"text": "✅ Permitir y Bautizar", "callback_data": f"permitir_{codigo}_{mac}"},
+                        {"text": "❌ Ignorar", "callback_data": f"ignorar_{mac}"}
                     ]]}
+                    
                     enviar_mensaje(chat_id, mensaje, reply_markup=markup)
+    
+    # Escucha en la ruta 'usuarios' para detectar cambios en cualquier red
     db.reference('usuarios').listen(callback)
-
 def procesar_actualizaciones():
     offset = None
     while True:
