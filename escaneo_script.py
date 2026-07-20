@@ -99,9 +99,14 @@ def escanear_red(codigo):
 
 # --- MAIN ---
 if __name__ == "__main__":
-    codigo = generar_codigo()
-    registrar_codigo_en_nube(codigo)
-    print(f"🔑 TU CÓDIGO: {codigo}")
+    # COMENTÁ estas dos líneas para que no te invente un código vacío cada vez:
+    # codigo = generar_codigo()
+    # registrar_codigo_en_nube(codigo)
+    
+    # REEMPLAZÁ acá abajo con el código exacto donde cargaste tu chat_id en Firebase:
+    codigo = "VIG-RNLC" 
+    
+    print(f"🔑 USANDO CÓDIGO FIJO PARA PRUEBAS: {codigo}")
     
     # Hilo para el bot (para procesar callbacks como permitir/ignorar)
     threading.Thread(target=bot.infinity_polling, daemon=True).start()
