@@ -6,7 +6,7 @@ import os
 import json
 from firebase_admin import credentials, db
 
-# --- AQUÍ VA TU FUNCIÓN CORREGIDA ---
+# --- FUNCIÓN DE ENVÍO ---
 def enviar_mensaje(chat_id, texto, reply_markup=None):
     url = f"https://api.telegram.org/bot{TOKEN_TELEGRAM}/sendMessage"
     payload = {
@@ -15,16 +15,19 @@ def enviar_mensaje(chat_id, texto, reply_markup=None):
         "parse_mode": "Markdown",
         "reply_markup": json.dumps(reply_markup) if reply_markup else None
     }
-    requests.post(url, data=payload)
+    try:
+        requests.post(url, data=payload)
+    except Exception as e:
+        print(f"Error al enviar mensaje: {e}")
 
-# --- EL RESTO DE TU CÓDIGO (TOKEN, INICIALIZACIÓN, FUNCIONES) ---
+# --- CONFIGURACIÓN DE TOKENS ---
 TOKEN_TELEGRAM = '8709241753:AAGBhWXccYJBoP4BQrCbFgeO-YmuyEDGv30'
-# ... (y el resto de tu código que me pasaste antes)
 
 # Inicializar Firebase
 cred_json = json.loads(os.getenv("FIREBASE_CREDENTIALS"))
 cred = credentials.Certificate(cred_json)
 firebase_admin.initialize_app(cred, {'databaseURL': 'https://vigilante-de-red-default-rtdb.firebaseio.com/'})
+
 # Diccionarios de estado
 esperando_nombre = {} # {chat_id: (codigo, mac)}
 usuario_vinculado = {} # {chat_id: codigo}
@@ -48,7 +51,6 @@ def escuchar_firebase():
                         f"¿Querés darle permiso de acceso a tu red?"
                     )
                     
-                    # Cambiamos el separador "_" por "|" para evitar errores de parseo con las MACs
                     markup = {"inline_keyboard": [[
                         {"text": "✅ Permitir y Bautizar", "callback_data": f"permitir|{codigo}|{mac}"},
                         {"text": "❌ Ignorar", "callback_data": f"ignorar|{mac}"}
@@ -65,8 +67,8 @@ def procesar_actualizaciones():
         try:
             response = requests.get(url).json()
         except Exception as e:
-            print(f"Error de conexión: {e}")
-            time.sleep(1)
+            print(f"Error de conexión con Telegram: {e}")
+            time.sleep(2)
             continue
 
         if "result" in response:
@@ -80,52 +82,80 @@ def procesar_actualizaciones():
                     data = query["data"]
                     
                     if data.startswith("permitir|"):
-                        # Separamos usando el nuevo carácter "|"
-                        _, codigo, mac = data.split("|")
-                        esperando_nombre[chat_id] = (codigo, mac)
-                        enviar_mensaje(chat_id, "✍️ Escribime el nombre para este dispositivo:")
+                        try:
+                            _, codigo, mac = data.split("|")
+                            esperando_nombre[chat_id] = (codigo, mac)
+                            enviar_mensaje(chat_id, "✍️ Escribime el nombre para este dispositivo:")
+                        except Exception as e:
+                            print(f"Error procesando callback: {e}")
                 
                 # 2. MANEJO DE MENSAJES DE TEXTO
                 elif "message" in update and "text" in update["message"]:
                     msg = update["message"]
                     chat_id, texto = msg["chat"]["id"], msg["text"]
                     
+                    # El comando /start SIEMPRE tiene prioridad absoluta y rompe estados anteriores
                     if texto.startswith("/start"):
-                        codigo = texto.split(" ")[1].upper() if len(texto.split()) > 1 else None
+                        # Si estaba esperando un nombre, cancelamos esa espera
+                        if chat_id in esperando_nombre:
+                            esperando_nombre.pop(chat_id)
+                            
+                        partes = texto.split()
+                        codigo = partes[1].upper() if len(partes) > 1 else None
                         if codigo:
-                            db.reference(f'usuarios/{codigo}').update({'chat_id': chat_id})
-                            usuario_vinculado[chat_id] = codigo
-                            enviar_mensaje(chat_id, f"✅ Vinculado a {codigo}.")
+                            try:
+                                db.reference(f'usuarios/{codigo}').update({'chat_id': chat_id})
+                                usuario_vinculado[chat_id] = codigo
+                                enviar_mensaje(chat_id, f"✅ Vinculado exitosamente al código: {codigo}.")
+                            except Exception as e:
+                                enviar_mensaje(chat_id, "❌ Error al conectar con la base de datos.")
+                                print(f"Error en /start Firebase: {e}")
+                        else:
+                            enviar_mensaje(chat_id, "⚠️ Por favor ingresá el código. Ejemplo: `/start TU_CODIGO`")
                     
                     elif texto.startswith("/milista"):
                         codigo = usuario_vinculado.get(chat_id)
                         
-                        # Si no está en memoria, intentamos recuperarlo buscando en Firebase
-                        if not codigo:
-                            usuarios_db = db.reference('usuarios').get() or {}
-                            for cod, datos in usuarios_db.items():
-                                if datos.get('chat_id') == chat_id:
-                                    codigo = cod
-                                    usuario_vinculado[chat_id] = codigo
-                                    break
+                        if not codigo: # Intento de recuperación dinámica
+                            try:
+                                usuarios_db = db.reference('usuarios').get() or {}
+                                for cod, datos in usuarios_db.items():
+                                    if datos.get('chat_id') == chat_id:
+                                        codigo = cod
+                                        usuario_vinculado[chat_id] = codigo
+                                        break
+                            except Exception as e:
+                                print(f"Error recuperando usuario: {e}")
                         
                         if codigo:
-                            dispositivos = db.reference(f'usuarios/{codigo}/dispositivos_detectados').get() or {}
-                            lista = "\n".join([f"✅ {d.get('nombre_bautizado')} ({k.replace('_', ':')})" 
-                                               for k, d in dispositivos.items() if d.get('nombre_bautizado')])
-                            enviar_mensaje(chat_id, f"📋 *Dispositivos habilitados:*\n{lista or 'Ninguno todavía.'}")
+                            try:
+                                dispositivos = db.reference(f'usuarios/{codigo}/dispositivos_detectados').get() or {}
+                                lista = "\n".join([f"✅ {d.get('nombre_bautizado')} ({k.replace('_', ':')})" 
+                                                   for k, d in dispositivos.items() if d.get('nombre_bautizado')])
+                                enviar_mensaje(chat_id, f"📋 *Dispositivos habilitados:*\n{lista or 'Ninguno todavía.'}")
+                            except Exception as e:
+                                print(f"Error al traer lista: {e}")
                         else:
-                            enviar_mensaje(chat_id, "❌ No encontré ninguna red vinculada. Por favor, usa /start [tu_codigo]")
+                            enviar_mensaje(chat_id, "❌ No encontré ninguna red vinculada. Usá `/start TU_CODIGO` primero.")
                     
-                    # 3. CAPTURA DEL NOMBRE (BAUTISMO)
+                    # Si no es un comando, evaluamos si el usuario estaba bautizando un dispositivo
                     elif chat_id in esperando_nombre:
-                        codigo, mac = esperando_nombre.pop(chat_id)
-                        
-                        # Guardamos en Firebase: cambiamos es_intruso a False y seteamos el nombre
-                        db.reference(f'usuarios/{codigo}/dispositivos_detectados/{mac}').update({
-                            'nombre_bautizado': texto, 
-                            'es_intruso': False
-                        })
-                        enviar_mensaje(chat_id, f"✅ Dispositivo \"{texto}\" bautizado y autorizado correctamente.")
-                        
+                        try:
+                            codigo, mac = esperando_nombre.pop(chat_id)
+                            db.reference(f'usuarios/{codigo}/dispositivos_detectados/{mac}').update({
+                                'nombre_bautizado': texto, 
+                                'es_intruso': False
+                            })
+                            enviar_mensaje(chat_id, f"✅ Dispositivo \"{texto}\" bautizado y autorizado correctamente.")
+                        except Exception as e:
+                            print(f"Error guardando bautismo: {e}")
+                            enviar_mensaje(chat_id, "❌ Hubo un problema al guardar el nombre en Firebase.")
+                            
         time.sleep(1)
+
+if __name__ == "__main__":
+    # Arrancamos el hilo de Firebase
+    threading.Thread(target=escuchar_firebase, daemon=True).start()
+    # Iniciamos el bucle principal de Telegram
+    print("Vigilante de red encendido y escuchando...")
+    procesar_actualizaciones()
