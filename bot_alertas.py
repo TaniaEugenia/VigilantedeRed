@@ -25,9 +25,8 @@ TOKEN_TELEGRAM = '8709241753:AAGBhWXccYJBoP4BQrCbFgeO-YmuyEDGv30'
 cred_json = json.loads(os.getenv("FIREBASE_CREDENTIALS"))
 cred = credentials.Certificate(cred_json)
 firebase_admin.initialize_app(cred, {'databaseURL': 'https://vigilante-de-red-default-rtdb.firebaseio.com/'})
-
 # Diccionarios de estado
-esperando_nombre = {} # {chat_id: mac}
+esperando_nombre = {} # {chat_id: (codigo, mac)}
 usuario_vinculado = {} # {chat_id: codigo}
 
 def escuchar_firebase():
@@ -40,7 +39,6 @@ def escuchar_firebase():
             dispositivos = datos_usuario.get('dispositivos_detectados', {})
             for mac, disp in dispositivos.items():
                 if disp.get('es_intruso') and not disp.get('nombre_bautizado'):
-                    # Formato mejorado igual a tu segunda foto
                     mensaje = (
                         f"🚨 *¡INTRUSO DETECTADO!* 🚨\n\n"
                         f"📍 *IP:* `{disp.get('ip')}`\n"
@@ -50,55 +48,84 @@ def escuchar_firebase():
                         f"¿Querés darle permiso de acceso a tu red?"
                     )
                     
-                    # Dos botones: Permitir y Ignorar
+                    # Cambiamos el separador "_" por "|" para evitar errores de parseo con las MACs
                     markup = {"inline_keyboard": [[
-                        {"text": "✅ Permitir y Bautizar", "callback_data": f"permitir_{codigo}_{mac}"},
-                        {"text": "❌ Ignorar", "callback_data": f"ignorar_{mac}"}
+                        {"text": "✅ Permitir y Bautizar", "callback_data": f"permitir|{codigo}|{mac}"},
+                        {"text": "❌ Ignorar", "callback_data": f"ignorar|{mac}"}
                     ]]}
                     
                     enviar_mensaje(chat_id, mensaje, reply_markup=markup)
     
-    # Escucha en la ruta 'usuarios' para detectar cambios en cualquier red
     db.reference('usuarios').listen(callback)
+
 def procesar_actualizaciones():
     offset = None
     while True:
         url = f"https://api.telegram.org/bot{TOKEN_TELEGRAM}/getUpdates?timeout=10&offset={offset}"
-        response = requests.get(url).json()
+        try:
+            response = requests.get(url).json()
+        except Exception as e:
+            print(f"Error de conexión: {e}")
+            time.sleep(1)
+            continue
+
         if "result" in response:
             for update in response["result"]:
                 offset = update["update_id"] + 1
+                
+                # 1. MANEJO DE BOTONES (CALLBACK QUERIES)
                 if "callback_query" in update:
                     query = update["callback_query"]
                     chat_id = query["message"]["chat"]["id"]
                     data = query["data"]
-                    if data.startswith("permitir_"):
-                        _, codigo, mac = data.split("_", 2)
+                    
+                    if data.startswith("permitir|"):
+                        # Separamos usando el nuevo carácter "|"
+                        _, codigo, mac = data.split("|")
                         esperando_nombre[chat_id] = (codigo, mac)
                         enviar_mensaje(chat_id, "✍️ Escribime el nombre para este dispositivo:")
+                
+                # 2. MANEJO DE MENSAJES DE TEXTO
                 elif "message" in update and "text" in update["message"]:
                     msg = update["message"]
                     chat_id, texto = msg["chat"]["id"], msg["text"]
+                    
                     if texto.startswith("/start"):
                         codigo = texto.split(" ")[1].upper() if len(texto.split()) > 1 else None
                         if codigo:
                             db.reference(f'usuarios/{codigo}').update({'chat_id': chat_id})
                             usuario_vinculado[chat_id] = codigo
                             enviar_mensaje(chat_id, f"✅ Vinculado a {codigo}.")
+                    
                     elif texto.startswith("/milista"):
                         codigo = usuario_vinculado.get(chat_id)
+                        
+                        # Si no está en memoria, intentamos recuperarlo buscando en Firebase
+                        if not codigo:
+                            usuarios_db = db.reference('usuarios').get() or {}
+                            for cod, datos in usuarios_db.items():
+                                if datos.get('chat_id') == chat_id:
+                                    codigo = cod
+                                    usuario_vinculado[chat_id] = codigo
+                                    break
+                        
                         if codigo:
                             dispositivos = db.reference(f'usuarios/{codigo}/dispositivos_detectados').get() or {}
-                            lista = "\n".join([f"✅ {d.get('nombre_bautizado')}" for d in dispositivos.values() if not d.get('es_intruso')])
-                            enviar_mensaje(chat_id, f"📋 *Dispositivos habilitados:*\n{lista or 'Ninguno'}")
+                            lista = "\n".join([f"✅ {d.get('nombre_bautizado')} ({k.replace('_', ':')})" 
+                                               for k, d in dispositivos.items() if d.get('nombre_bautizado')])
+                            enviar_mensaje(chat_id, f"📋 *Dispositivos habilitados:*\n{lista or 'Ninguno todavía.'}")
+                        else:
+                            enviar_mensaje(chat_id, "❌ No encontré ninguna red vinculada. Por favor, usa /start [tu_codigo]")
+                    
+                    # 3. CAPTURA DEL NOMBRE (BAUTISMO)
                     elif chat_id in esperando_nombre:
                         codigo, mac = esperando_nombre.pop(chat_id)
+                        
+                        # Guardamos en Firebase: cambiamos es_intruso a False y seteamos el nombre
                         db.reference(f'usuarios/{codigo}/dispositivos_detectados/{mac}').update({
-                            'nombre_bautizado': texto, 'es_intruso': False
+                            'nombre_bautizado': texto, 
+                            'es_intruso': False
                         })
-                        enviar_mensaje(chat_id, "✅ Dispositivo bautizado y autorizado.")
+                        enviar_mensaje(chat_id, f"✅ Dispositivo \"{texto}\" bautizado y autorizado correctamente.")
+                        
         time.sleep(1)
-
-if __name__ == "__main__":
-    threading.Thread(target=escuchar_firebase, daemon=True).start()
-    procesar_actualizaciones()
