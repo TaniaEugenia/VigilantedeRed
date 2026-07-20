@@ -6,7 +6,20 @@ import os
 import json
 from firebase_admin import credentials, db
 
+# --- AQUÍ VA TU FUNCIÓN CORREGIDA ---
+def enviar_mensaje(chat_id, texto, reply_markup=None):
+    url = f"https://api.telegram.org/bot{TOKEN_TELEGRAM}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": texto,
+        "parse_mode": "Markdown",
+        "reply_markup": json.dumps(reply_markup) if reply_markup else None
+    }
+    requests.post(url, data=payload)
+
+# --- EL RESTO DE TU CÓDIGO (TOKEN, INICIALIZACIÓN, FUNCIONES) ---
 TOKEN_TELEGRAM = '8709241753:AAGBhWXccYJBoP4BQrCbFgeO-YmuyEDGv30'
+# ... (y el resto de tu código que me pasaste antes)
 
 # Inicializar Firebase
 cred_json = json.loads(os.getenv("FIREBASE_CREDENTIALS"))
