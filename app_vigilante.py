@@ -5,10 +5,10 @@ import datetime
 import json
 import os
 
-# 1. CONFIGURACIÓN (DEBE SER LO PRIMERO)
+# 1. CONFIGURACIÓN
 st.set_page_config(layout="wide", page_title="Vigilante de Red - Panel")
 
-# --- ESTILO FINAL OSCURO MANTENIDO ---
+# ESTILO
 page_bg_img = """
 <style>
 [data-testid="stAppViewContainer"] { background-image: url("https://i.imgur.com/3YmgikW.png"); background-size: cover; }
@@ -32,15 +32,13 @@ page_bg_img = """
 """
 st.markdown(page_bg_img, unsafe_allow_html=True)
 
-# INICIALIZACIÓN DE FIREBASE (Segura para producción)
+# INICIALIZACIÓN DE FIREBASE
 if not firebase_admin._apps:
     try:
-        # Intenta primero leer variables de entorno (Ideal para entornos fuera de Streamlit como VS Code/Railway)
         cred_env = os.getenv("FIREBASE_CREDENTIALS")
         if cred_env:
             cred_dict = json.loads(cred_env)
         else:
-            # Si no, recurre a st.secrets de Streamlit
             secrets = st.secrets["FIREBASE"]
             cred_dict = {
                 "type": secrets["type"],
@@ -59,15 +57,7 @@ if not firebase_admin._apps:
     except Exception as e:
         st.error(f"Error al inicializar Firebase: {e}")
 
-# =====================================================================
-# LÓGICA DE BACKEND REUTILIZABLE (Copiable al 100% para tu app en Visual Studio)
-# =====================================================================
-
 def obtener_y_verificar_usuario(codigo):
-    """
-    Trae los datos de la red y procesa el estado comercial en tiempo real.
-    Si detecta expiración, actualiza Firebase automáticamente.
-    """
     ref = db.reference(f'usuarios/{codigo}')
     usuario_data = ref.get()
     
@@ -77,85 +67,102 @@ def obtener_y_verificar_usuario(codigo):
     estado_actual = usuario_data.get('estado', 'activo')
     fecha_venc_str = usuario_data.get('fecha_vencimiento')
     
-    # 1. Autocalcular vencimiento inicial de cortesía si no existe
     if not fecha_venc_str and usuario_data.get('fecha_creacion'):
         try:
             fecha_c_str = usuario_data.get('fecha_creacion').split(".")[0]
             fecha_c = datetime.datetime.strptime(fecha_c_str, "%Y-%m-%d %H:%M:%S")
-            fecha_venc = fecha_c + datetime.timedelta(hours=24) # 24 horas gratis de prueba
+            fecha_venc = fecha_c + datetime.timedelta(hours=24)
             fecha_venc_str = fecha_venc.strftime("%Y-%m-%d %H:%M:%S")
             ref.update({'fecha_vencimiento': fecha_venc_str})
         except Exception as e:
-            print(f"Error parseando fecha_creacion: {e}")
             fecha_venc_str = (datetime.datetime.now() + datetime.timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
 
-    # 2. Verificar si la licencia expiró en base al tiempo actual
     if fecha_venc_str:
         try:
             fecha_limite = datetime.datetime.strptime(fecha_venc_str.split(".")[0], "%Y-%m-%d %H:%M:%S")
             if datetime.datetime.now() > fecha_limite or estado_actual == 'suspendido':
                 if estado_actual != 'suspendido':
                     ref.update({'estado': 'suspendido'})
-                usuario_data['estado'] = 'suspendido' # Sincroniza la respuesta local
+                usuario_data['estado'] = 'suspendido'
         except Exception as e:
             print(f"Error verificando tiempos: {e}")
             
     return usuario_data
 
-# =====================================================================
-# INTERFAZ GRÁFICA (FRONTEND ACTUAL EN STREAMLIT)
-# =====================================================================
-
+# INTERFAZ GRÁFICA
 st.title("🛡️ VIGILANTE DE RED - PANEL DE CONTROL")
 codigo_usuario = st.text_input("Ingrese el código VIG-XXXX para monitorear").upper()
 
 if codigo_usuario:
-    # Usamos la función modular reutilizable
     usuario_data = obtener_y_verificar_usuario(codigo_usuario)
     
     if usuario_data:
         estado = usuario_data.get('estado', 'activo')
         fecha_venc = usuario_data.get('fecha_vencimiento', 'No disponible')
         
-        # Muestra métricas de estado según su situación comercial
         if estado == 'activo':
             st.metric("Estado del Servicio", "🟢 ACTIVO / PROTEGIDO")
             st.info(f"📅 *Tu suscripción está al día.* Vence el: `{fecha_venc}`")
         else:
             st.metric("Estado del Servicio", "🔴 SUSPENDIDO / VENCIDO")
-            st.error(f"⚠️ *El tiempo de protección de tu licencia expiró.* El escaneo automático está pausado. Podés renovar tu plan desde los botones de la barra lateral izquierda.")
+            st.error(f"⚠️ *El tiempo de protección de tu licencia expiró.* El escaneo automático está pausado.")
             
-        st.subheader("📋 Historial de Dispositivos en Red")
+        st.subheader("📋 Gestión de Dispositivos de Red")
         dispositivos = usuario_data.get('dispositivos_detectados', {})
         
         if dispositivos:
-            for mac, info in dispositivos.items():
-                mac_formateada = mac.replace("_", ":")
-                nombre = info.get('nombre_bautizado', "Dispositivo sin nombre")
-                
-                col1, col2 = st.columns([3, 1])
-                
-                # Renderizado de condiciones
-                if info.get('es_intruso'):
-                    col1.error(f"🚨 INTRUSO: {nombre} | IP: {info.get('ip')} | MAC: `{mac_formateada}`")
+            bautizados = {k: v for k, v in dispositivos.items() if v.get('nombre_bautizado')}
+            sin_bautizar = {k: v for k, v in dispositivos.items() if not v.get('nombre_bautizado')}
+            
+            tab1, tab2 = st.tabs([f"✅ Bautizados ({len(bautizados)})", f"⚠️ Sin Bautizar ({len(sin_bautizar)})"])
+            
+            # --- SECCIÓN BAUTIZADOS ---
+            with tab1:
+                if bautizados:
+                    for mac, info in bautizados.items():
+                        mac_formateada = mac.replace("_", ":")
+                        nombre = info.get('nombre_bautizado')
+                        
+                        col1, col2 = st.columns([3, 1])
+                        col1.success(f"🟢 **{nombre}** | IP: `{info.get('ip', 'N/A')}` | MAC: `{mac_formateada}` | Fab: {info.get('fabricante', 'Desconocido')}")
+                        
+                        if col2.button("🗑️ Revocar / Borrar", key=f"del_{mac}"):
+                            db.reference(f'usuarios/{codigo_usuario}/dispositivos_detectados/{mac}/nombre_bautizado').delete()
+                            db.reference(f'usuarios/{codigo_usuario}/dispositivos_detectados/{mac}/es_intruso').set(True)
+                            st.rerun()
                 else:
-                    col1.success(f"✅ Confiable: {nombre} | MAC: `{mac_formateada}`")
-                
-                # Botón para revocar permisos (Bautismo)
-                if col2.button("🗑️ Borrar", key=f"btn_{mac}"):
-                    db.reference(f'usuarios/{codigo_usuario}/dispositivos_detectados/{mac}/nombre_bautizado').delete()
-                    db.reference(f'usuarios/{codigo_usuario}/dispositivos_detectados/{mac}/es_intruso').set(True)
-                    st.rerun()
+                    st.info("No hay dispositivos bautizados todavía.")
+
+            # --- SECCIÓN SIN BAUTIZAR ---
+            with tab2:
+                if sin_bautizar:
+                    for mac, info in sin_bautizar.items():
+                        mac_formateada = mac.replace("_", ":")
+                        
+                        col1, col2, col3 = st.columns([2, 2, 1])
+                        col1.warning(f"⚠️ MAC: `{mac_formateada}` | IP: `{info.get('ip', 'N/A')}` | Fab: {info.get('fabricante', 'Desconocido')}")
+                        
+                        nuevo_nombre = col2.text_input("Asignar nombre", key=f"input_{mac}", placeholder="Ej: Smart TV Living")
+                        
+                        if col3.button("✍️ Bautizar", key=f"bautizar_{mac}"):
+                            if nuevo_nombre.strip():
+                                db.reference(f'usuarios/{codigo_usuario}/dispositivos_detectados/{mac}').update({
+                                    'nombre_bautizado': nuevo_nombre.strip(),
+                                    'es_intruso': False
+                                })
+                                st.rerun()
+                            else:
+                                st.error("Ingresá un nombre.")
+                else:
+                    st.info("¡Excelente! Todos los dispositivos detectados están bautizados.")
         else:
             st.warning("Esperando reporte inicial del escáner instalado en la red local...")
     else:
         st.error("Código no encontrado en el sistema. Verifique los caracteres ingresados.")
 
-# --- BARRA LATERAL (Con tus links reales de Mercado Pago agregados) ---
+# BARRA LATERAL
 with st.sidebar:
     st.subheader("Gestión de Acceso")
     logo_mp = "https://images.seeklogo.com/logo-png/19/1/mercadopago-logo-png_seeklogo-199533.png"
-    
-    # Links definitivos de Mercado Pago
     st.markdown(f'<a href="https://mpago.la/1NqWsQf" target="_blank" class="btn-mp"><img src="{logo_mp}" width="20" style="vertical-align:middle"> Pagar 24hs ($10.000)</a>', unsafe_allow_html=True)
     st.markdown(f'<a href="https://mpago.la/2N8NvtF" target="_blank" class="btn-mp"><img src="{logo_mp}" width="20" style="vertical-align:middle"> Pagar 30 días ($20.000)</a>', unsafe_allow_html=True)

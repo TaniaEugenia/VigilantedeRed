@@ -34,7 +34,7 @@ def enviar_mensaje(chat_id, texto, reply_markup=None):
     except Exception as e:
         print(f"Error al enviar mensaje: {e}")
 
-# --- ESCUCHA EN TIEMPO REAL (ALERTAS DE INTRUSO INTACTAS) ---
+# --- ESCUCHA EN TIEMPO REAL (ALERTAS DE DISPOSITIVOS) ---
 def escuchar_firebase():
     def callback(event):
         if not event.data or not isinstance(event.data, dict): return
@@ -44,14 +44,18 @@ def escuchar_firebase():
             
             dispositivos = datos_usuario.get('dispositivos_detectados', {})
             for mac, disp in dispositivos.items():
-                if disp.get('es_intruso') and not disp.get('nombre_bautizado'):
+                # Notifica si es intruso o si es un equipo detectado que aún no fue bautizado
+                if (disp.get('es_intruso') or not disp.get('nombre_bautizado')) and not disp.get('alerta_enviada'):
+                    es_intruso = disp.get('es_intruso', True)
+                    titulo = "🚨 *¡INTRUSO DETECTADO!* 🚨" if es_intruso else "⚠️ *NUEVO DISPOSITIVO SIN BAUTIZAR* ⚠️"
+                    
                     mensaje = (
-                        f"🚨 *¡INTRUSO DETECTADO!* 🚨\n\n"
-                        f"📍 *IP:* `{disp.get('ip')}`\n"
+                        f"{titulo}\n\n"
+                        f"📍 *IP:* `{disp.get('ip', 'Desconocida')}`\n"
                         f"🏷 *MAC:* `{mac.replace('_', ':')}`\n"
                         f"⚙️ *Fabricante:* {disp.get('fabricante', 'Desconocido')}\n"
                         f"🔍 *Tipo estimado:* {disp.get('tipo', 'Desconocido')}\n\n"
-                        f"¿Querés darle permiso de acceso a tu red?"
+                        f"¿Querés darle un nombre y autorizarlo en tu red?"
                     )
                     
                     markup = {"inline_keyboard": [[
@@ -60,6 +64,8 @@ def escuchar_firebase():
                     ]]}
                     
                     enviar_mensaje(chat_id, mensaje, reply_markup=markup)
+                    # Marcamos para evitar spam repetido en tiempo real
+                    db.reference(f'usuarios/{codigo}/dispositivos_detectados/{mac}').update({'alerta_enviada': True})
     
     db.reference('usuarios').listen(callback)
 
@@ -97,17 +103,22 @@ def procesar_updates_telegram():
                         except Exception as e:
                             print(f"Error procesando callback permitir: {e}")
                             
-                    # B) El cliente avisa que ya realizó el pago (Opción B)
+                    elif data.startswith("ignorar|"):
+                        try:
+                            url_edit = f"https://api.telegram.org/bot{TOKEN_TELEGRAM}/editMessageText"
+                            requests.post(url_edit, data={"chat_id": chat_id, "message_id": message_id, "text": "👁️ Dispositivo ignorado por el momento.", "parse_mode": "Markdown"})
+                        except Exception as e:
+                            print(f"Error al ignorar: {e}")
+
+                    # B) El cliente avisa que ya realizó el pago
                     elif data.startswith("avisar_"):
                         try:
                             partes = data.split("_")
                             horas = partes[1]
                             codigo_usuario = partes[2]
                             
-                            # Confirmamos la recepción al cliente
                             enviar_mensaje(chat_id, "✅ *Aviso recibido.* Estamos verificando tu pago en el sistema. Recordá que la activación puede demorar hasta 24 hs. ¡Muchas gracias!")
                             
-                            # Te enviamos la alerta a tu chat privado para control manual
                             mensaje_admin = (f"💰 *¡ALERTA DE PAGO A VERIFICAR!*\n\n"
                                              f"👤 *Usuario (Chat ID):* `{chat_id}`\n"
                                              f"🔑 *Código Red:* `{codigo_usuario}`\n"
@@ -147,13 +158,11 @@ def procesar_updates_telegram():
                                     
                             nueva_fecha_venc = fecha_base + datetime.timedelta(hours=horas)
                             
-                            # Actualizamos a activo y seteamos el nuevo vencimiento
                             ref.update({
                                 'estado': 'activo',
                                 'fecha_vencimiento': nueva_fecha_venc.strftime("%Y-%m-%d %H:%M:%S")
                             })
                             
-                            # Modificamos tu mensaje de control para dejar registro
                             url_edit = f"https://api.telegram.org/bot{TOKEN_TELEGRAM}/editMessageText"
                             payload_edit = {
                                 "chat_id": chat_id,
@@ -163,7 +172,6 @@ def procesar_updates_telegram():
                             }
                             requests.post(url_edit, data=payload_edit)
                             
-                            # Notificamos al cliente la activación inmediata
                             texto_cliente = (f"🚀 *¡Tu pago fue verificado e ingresado al sistema!* \n\n"
                                              f"Tu red `{codigo_usuario}` ya se encuentra *ACTIVA*.\n"
                                              f"Protección válida hasta el: `{nueva_fecha_venc.strftime('%d/%m/%Y %H:%M:%S')}`.")
@@ -189,7 +197,7 @@ def procesar_updates_telegram():
                     msg = update["message"]
                     chat_id, texto = msg["chat"]["id"], msg["text"]
                     
-                    # Comando /start (Vinculación de Nodos)
+                    # Comando /start
                     if texto.startswith("/start"):
                         if chat_id in esperando_nombre:
                             esperando_nombre.pop(chat_id)
@@ -207,11 +215,11 @@ def procesar_updates_telegram():
                         else:
                             enviar_mensaje(chat_id, "⚠️ Por favor ingresá el código. Ejemplo: `/start TU_CODIGO`")
                     
-                    # Comando /milista (Muestra lista si está activo o bloquea pidiendo pago si venció)
+                    # Comando /milista (MUESTRA BAUTIZADOS Y PENDIENTES POR SEPARADO)
                     elif texto.startswith("/milista"):
                         codigo = usuario_vinculado.get(chat_id)
                         
-                        if not codigo: # Búsqueda de rescate dinámica en Firebase
+                        if not codigo: 
                             try:
                                 usuarios_db = db.reference('usuarios').get() or {}
                                 for cod, datos in usuarios_db.items():
@@ -228,7 +236,6 @@ def procesar_updates_telegram():
                                 estado_actual = datos_usuario.get('estado', 'activo')
                                 fecha_venc_str = datos_usuario.get('fecha_vencimiento')
                                 
-                                # Si no existe la variable de vencimiento, creamos las 24hs gratis iniciales
                                 if not fecha_venc_str and datos_usuario.get('fecha_creacion'):
                                     try:
                                         fecha_c_str = datos_usuario.get('fecha_creacion').split(".")[0]
@@ -240,7 +247,7 @@ def procesar_updates_telegram():
                                         print(f"Error parseando fecha_creacion: {err_parse}")
                                         fecha_venc_str = (datetime.datetime.now() + datetime.timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
                                 
-                                # Verificación Comercial de Expiración
+                                # Verificación Expiración
                                 if fecha_venc_str:
                                     fecha_limite = datetime.datetime.strptime(fecha_venc_str.split(".")[0], "%Y-%m-%d %H:%M:%S")
                                     if datetime.datetime.now() > fecha_limite or estado_actual == 'suspendido':
@@ -252,28 +259,46 @@ def procesar_updates_telegram():
                                                         f"1️⃣ *Aboná el plan que prefieras aquí:*\n"
                                                         f"🔗 [Pagar 24 Horas Extra - $10.000](https://mpago.la/1NqWsQf)\n"
                                                         f"🔗 [Pagar 30 Días / 720hs - $20.000](https://mpago.la/2N8NvtF)\n\n"
-                                                        f"2️⃣ *Una vez realizado el pago, presiona abajo:*\n"
-                                                        f"📌 _Nota: La verificación es manual y puede demorar hasta 24hs en habilitarse._")
+                                                        f"2️⃣ *Una vez realizado el pago, presiona abajo:*")
                                         
                                         markup_pago = {"inline_keyboard": [
                                             [{"text": "🔔 Ya pagué 24 Horas (Notificar)", "callback_data": f"avisar_24_{codigo}"}],
                                             [{"text": "📅 Ya pagué 30 Días (Notificar)", "callback_data": f"avisar_720_{codigo}"}]
                                         ]}
                                         enviar_mensaje(chat_id, mensaje_pago, reply_markup=markup_pago)
-                                        continue # Corta el flujo comercial
+                                        continue
                                 
-                                # Flujo normal si está AL DÍA: Muestra su lista original limpia
+                                # SEPARACIÓN DE DISPOSITIVOS EN LISTA
                                 dispositivos = datos_usuario.get('dispositivos_detectados', {})
-                                lista = "\n".join([f"✅ {d.get('nombre_bautizado')} (`{k.replace('_', ':')}`)" 
-                                                   for k, d in dispositivos.items() if d.get('nombre_bautizado')])
                                 
-                                enviar_mensaje(chat_id, f"📋 *Dispositivos autorizados en tu red:*\n\n{lista or 'Ninguno todavía.'}")
+                                bautizados = []
+                                pendientes = []
+                                
+                                for k, d in dispositivos.items():
+                                    mac_clean = k.replace('_', ':')
+                                    nombre = d.get('nombre_bautizado')
+                                    if nombre:
+                                        bautizados.append(f"✅ *{nombre}* (`{mac_clean}`)")
+                                    else:
+                                        ip = d.get('ip', 'IP no desc.')
+                                        fab = d.get('fabricante', 'Desconocido')
+                                        pendientes.append(f"⚠️ `{mac_clean}` - IP: {ip} ({fab})")
+                                
+                                msg_final = f"📋 *REPORTE DE RED (`{codigo}`)*\n\n"
+                                
+                                msg_final += "🟢 *Dispositivos Autorizados (Bautizados):*\n"
+                                msg_final += "\n".join(bautizados) if bautizados else "_Ninguno bautizado aún._"
+                                
+                                msg_final += "\n\n🟡 *Dispositivos Detectados Sin Nombre:*\n"
+                                msg_final += "\n".join(pendientes) if pendientes else "_No hay dispositivos pendientes._"
+                                
+                                enviar_mensaje(chat_id, msg_final)
                             except Exception as e:
                                 print(f"Error al traer lista de dispositivos: {e}")
                         else:
                             enviar_mensaje(chat_id, "❌ No encontré ninguna red vinculada. Usá `/start TU_CODIGO` primero.")
                     
-                    # Captura de textos para Bautismos (Mantiene tu lógica nativa)
+                    # Captura de textos para Bautismos
                     elif chat_id in esperando_nombre:
                         try:
                             codigo, mac = esperando_nombre.pop(chat_id)
@@ -289,9 +314,6 @@ def procesar_updates_telegram():
         time.sleep(1)
 
 if __name__ == "__main__":
-    # Arrancamos el daemon de Firebase para alertas en tiempo real
     threading.Thread(target=escuchar_firebase, daemon=True).start()
-    
-    # Arrancamos el procesador principal del bot
     print("Vigilante de red comercial encendido y escuchando...")
     procesar_updates_telegram()
