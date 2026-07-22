@@ -32,7 +32,7 @@ page_bg_img = """
 """
 st.markdown(page_bg_img, unsafe_allow_html=True)
 
-# INICIALIZACIÓN DE FIREBASE
+# 2. INICIALIZACIÓN DE FIREBASE
 if not firebase_admin._apps:
     try:
         cred_env = os.getenv("FIREBASE_CREDENTIALS")
@@ -57,6 +57,7 @@ if not firebase_admin._apps:
     except Exception as e:
         st.error(f"Error al inicializar Firebase: {e}")
 
+# 3. LÓGICA DE USUARIO Y SUSCRIPCIÓN
 def obtener_y_verificar_usuario(codigo):
     ref = db.reference(f'usuarios/{codigo}')
     usuario_data = ref.get()
@@ -89,7 +90,7 @@ def obtener_y_verificar_usuario(codigo):
             
     return usuario_data
 
-# INTERFAZ GRÁFICA
+# 4. INTERFAZ GRÁFICA
 st.title("🛡️ VIGILANTE DE RED - PANEL DE CONTROL")
 codigo_usuario = st.text_input("Ingrese el código VIG-XXXX para monitorear").upper()
 
@@ -105,7 +106,7 @@ if codigo_usuario:
             st.info(f"📅 *Tu suscripción está al día.* Vence el: `{fecha_venc}`")
         else:
             st.metric("Estado del Servicio", "🔴 SUSPENDIDO / VENCIDO")
-            st.error(f"⚠️ *El tiempo de protección de tu licencia expiró.* El escaneo automático está pausado.")
+            st.error("⚠️ *El tiempo de protección de tu licencia expiró.* El escaneo automático está pausado.")
             
         st.subheader("📋 Gestión de Dispositivos de Red")
         dispositivos = usuario_data.get('dispositivos_detectados', {})
@@ -127,8 +128,13 @@ if codigo_usuario:
                         col1.success(f"🟢 **{nombre}** | IP: `{info.get('ip', 'N/A')}` | MAC: `{mac_formateada}` | Fab: {info.get('fabricante', 'Desconocido')}")
                         
                         if col2.button("🗑️ Revocar / Borrar", key=f"del_{mac}"):
-                            db.reference(f'usuarios/{codigo_usuario}/dispositivos_detectados/{mac}/nombre_bautizado').delete()
-                            db.reference(f'usuarios/{codigo_usuario}/dispositivos_detectados/{mac}/es_intruso').set(True)
+                            # Se elimina el nombre, se marca como intruso y se reinicia el estado de alerta para Telegram
+                            disp_ref = db.reference(f'usuarios/{codigo_usuario}/dispositivos_detectados/{mac}')
+                            disp_ref.child('nombre_bautizado').delete()
+                            disp_ref.update({
+                                'es_intruso': True,
+                                'alerta_enviada': False
+                            })
                             st.rerun()
                 else:
                     st.info("No hay dispositivos bautizados todavía.")
@@ -160,7 +166,7 @@ if codigo_usuario:
     else:
         st.error("Código no encontrado en el sistema. Verifique los caracteres ingresados.")
 
-# BARRA LATERAL
+# 5. BARRA LATERAL
 with st.sidebar:
     st.subheader("Gestión de Acceso")
     logo_mp = "https://images.seeklogo.com/logo-png/19/1/mercadopago-logo-png_seeklogo-199533.png"
