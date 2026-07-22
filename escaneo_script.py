@@ -223,15 +223,23 @@ def escanear_red(codigo):
             mac_raw = recibido.hwsrc
             mac_key = mac_raw.replace(":", "_").lower()
             
-            if not ref_dispositivos.child(mac_key).get():
+            disp_ref = ref_dispositivos.child(mac_key)
+            disp_data = disp_ref.get()
+            
+            if not disp_data:
+                # El dispositivo es totalmente nuevo en la red
                 info_disp = {
                     'ip': ip,
                     'fabricante': obtener_fabricante(mac_raw),
                     'es_intruso': True,
                     'tipo': 'Desconocido'
                 }
-                ref_dispositivos.child(mac_key).set(info_disp)
+                disp_ref.set(info_disp)
                 threading.Thread(target=enviar_alerta_telegram, args=(ip, mac_key, info_disp['fabricante'], codigo)).start()
+            
+            elif disp_data.get('es_intruso') is True:
+                # El dispositivo ya estaba registrado pero SIGUE sin ser bautizado
+                disp_ref.update({'ip': ip})
                 
     except Exception as e:
         print(f"❌ Error en escaneo Npcap: {e}")
