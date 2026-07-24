@@ -4,4 +4,3 @@ firebase-admin
 gunicorn
 requests
 pyTelegramBotAPI
-streamlit
