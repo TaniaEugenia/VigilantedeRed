@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vigilante de Red - Panel de Control</title>
-    <!-- Evita que el navegador o sus extensiones alteren la iluminación del fondo -->
     <meta name="color-scheme" content="only light">
 <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -18,23 +17,26 @@
         color: white;
         display: flex;
         min-height: 100vh;
-        /* Ponemos la imagen directamente de fondo fijo sin degradados opacos */
-        background: #111 url('https://i.imgur.com/3YmgikW.png') no-repeat center center fixed;
+        /* Fondo fijo optimizado */
+        background-color: #0d1117; 
+        background-image: url('https://i.imgur.com/3YmgikW.png');
+        background-repeat: no-repeat;
+        background-position: center center;
+        background-attachment: fixed;
         background-size: cover;
     }
 
-    /* Sidebar - Ultratransparente */
+    /* Sidebar sin backdrop-filter para evitar el lag de renderizado */
     .sidebar {
         width: 280px;
-        background-color: rgba(0, 0, 0, 0.25) !important; 
+        background-color: rgba(0, 0, 0, 0.45) !important; 
         padding: 20px;
         border-right: 1px solid rgba(255, 255, 255, 0.15);
-        backdrop-filter: blur(4px);
     }
     .sidebar h3 { margin-bottom: 20px; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
     
     .btn-mp {
-        background-color: rgba(0, 0, 0, 0.4);
+        background-color: rgba(0, 0, 0, 0.5);
         color: #fff;
         padding: 12px;
         border-radius: 8px;
@@ -50,7 +52,6 @@
     }
     .btn-mp:hover { background-color: rgba(255, 255, 255, 0.2); border-color: #fff; }
     
-    /* Main Content - Fondo 100% transparente para que no sume sombras al crecer */
     .main-content {
         flex: 1;
         padding: 30px;
@@ -69,7 +70,7 @@
         padding: 12px;
         border-radius: 6px;
         border: 1px solid rgba(255, 255, 255, 0.4);
-        background: rgba(0, 0, 0, 0.4);
+        background: rgba(0, 0, 0, 0.5);
         color: white;
         font-size: 1rem;
     }
@@ -86,18 +87,16 @@
     }
     button:hover { background: #1d4ed8; }
     
-    /* Status Banner */
+    /* Status Banner sin desenfoque */
     .status-card {
         padding: 15px 20px;
         border-radius: 8px;
         margin-bottom: 25px;
         font-size: 1.1rem;
-        backdrop-filter: blur(4px);
     }
-    .status-activo { background: rgba(34, 197, 94, 0.25); border: 1px solid #22c55e; color: #4ade80; }
-    .status-suspendido { background: rgba(239, 68, 68, 0.25); border: 1px solid #ef4444; color: #f87171; }
+    .status-activo { background: rgba(34, 197, 94, 0.35); border: 1px solid #22c55e; color: #4ade80; }
+    .status-suspendido { background: rgba(239, 68, 68, 0.35); border: 1px solid #ef4444; color: #f87171; }
     
-    /* Tabs */
     .tabs { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.2); }
     .tab-btn {
         background: none;
@@ -110,9 +109,9 @@
     }
     .tab-btn.active { color: white; border-bottom-color: #2563eb; font-weight: bold; }
     
-    /* Device List */
+    /* Device List sin desenfoque */
     .device-card {
-        background: rgba(0, 0, 0, 0.35);
+        background: rgba(0, 0, 0, 0.5);
         border: 1px solid rgba(255, 255, 255, 0.15);
         padding: 15px;
         border-radius: 8px;
@@ -120,14 +119,12 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        backdrop-filter: blur(4px);
     }
     .device-info { font-size: 0.95rem; }
     .btn-danger { background: #dc2626; }
     .btn-danger:hover { background: #b91c1c; }
     .inline-form { display: flex; gap: 8px; }
 
-    /* Asegurar que el contenedor dinámico no interfiera con el fondo */
     #resultado {
         background: transparent !important;
     }
