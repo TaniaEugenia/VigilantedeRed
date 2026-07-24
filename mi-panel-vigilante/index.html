@@ -5,114 +5,122 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vigilante de Red - Panel de Control</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body {
-            background: #121212 url('https://i.imgur.com/3YmgikW.png') no-repeat center center fixed;
-            background-size: cover;
-            color: white;
-            display: flex;
-            min-height: 100vh;
-        }
-        /* Sidebar */
-        .sidebar {
-            width: 280px;
-            background-color: rgba(0, 0, 0, 0.85);
-            padding: 20px;
-            border-right: 1px solid #333;
-            backdrop-filter: blur(5px);
-        }
-        .sidebar h3 { margin-bottom: 20px; font-size: 1.1rem; color: #ddd; }
-        .btn-mp {
-            background-color: #222;
-            color: #fff;
-            padding: 12px;
-            border-radius: 8px;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            font-weight: bold;
-            margin-bottom: 12px;
-            border: 1px solid #444;
-            transition: 0.3s;
-        }
-        .btn-mp:hover { background-color: #333; border-color: #666; }
-        
-        /* Main Container */
-        .main-content {
-            flex: 1;
-            padding: 30px;
-            background: rgba(18, 18, 18, 0.75);
-            backdrop-filter: blur(8px);
-        }
-        h1 { font-size: 1.8rem; margin-bottom: 20px; }
-        
-        .search-box {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 25px;
-            max-width: 500px;
-        }
-        input[type="text"] {
-            flex: 1;
-            padding: 12px;
-            border-radius: 6px;
-            border: 1px solid #444;
-            background: #000;
-            color: white;
-            font-size: 1rem;
-        }
-        button {
-            padding: 12px 20px;
-            border-radius: 6px;
-            border: none;
-            background: #2563eb;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        button:hover { background: #1d4ed8; }
-        
-        /* Status Banner */
-        .status-card {
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin-bottom: 25px;
-            font-size: 1.1rem;
-        }
-        .status-activo { background: rgba(34, 197, 94, 0.15); border: 1px solid #22c55e; color: #4ade80; }
-        .status-suspendido { background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171; }
-        
-        /* Tabs */
-        .tabs { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid #333; }
-        .tab-btn {
-            background: none;
-            border: none;
-            color: #aaa;
-            padding: 10px 15px;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-        }
-        .tab-btn.active { color: white; border-bottom-color: #2563eb; }
-        
-        /* Device List */
-        .device-card {
-            background: rgba(0, 0, 0, 0.6);
-            border: 1px solid #333;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .device-info { font-size: 0.95rem; }
-        .btn-danger { background: #dc2626; }
-        .btn-danger:hover { background: #b91c1c; }
-        .inline-form { display: flex; gap: 8px; }
-    </style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    
+    body {
+        /* Fondo con ajuste de brillo y contraste */
+        background: #000 url('https://i.imgur.com/3YmgikW.png') no-repeat center center fixed;
+        background-size: cover;
+        filter: brightness(1.15) contrast(1.05); /* Le da más luz y viveza al fondo */
+        color: white;
+        display: flex;
+        min-height: 100vh;
+    }
+
+    /* Sidebar - Fondo semitransparente para ver el fondo */
+    .sidebar {
+        width: 280px;
+        background-color: rgba(10, 10, 10, 0.45); /* Bajado a 45% de opacidad */
+        padding: 20px;
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px); /* Desenfoque elegante de fondo */
+    }
+    .sidebar h3 { margin-bottom: 20px; font-size: 1.1rem; color: #ddd; }
+    
+    .btn-mp {
+        background-color: rgba(25, 25, 25, 0.7);
+        color: #fff;
+        padding: 12px;
+        border-radius: 8px;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        font-weight: bold;
+        margin-bottom: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        transition: 0.3s;
+    }
+    .btn-mp:hover { background-color: rgba(50, 50, 50, 0.8); border-color: #666; }
+    
+    /* Main Container - Fondo cristalino */
+    .main-content {
+        flex: 1;
+        padding: 30px;
+        background: rgba(15, 15, 15, 0.35); /* Bajado a 35% para revelar la imagen */
+        backdrop-filter: blur(8px);
+    }
+    h1 { font-size: 1.8rem; margin-bottom: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+    
+    .search-box {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 25px;
+        max-width: 500px;
+    }
+    input[type="text"] {
+        flex: 1;
+        padding: 12px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        font-size: 1rem;
+    }
+    button {
+        padding: 12px 20px;
+        border-radius: 6px;
+        border: none;
+        background: #2563eb;
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    button:hover { background: #1d4ed8; }
+    
+    /* Status Banner */
+    .status-card {
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin-bottom: 25px;
+        font-size: 1.1rem;
+        backdrop-filter: blur(5px);
+    }
+    .status-activo { background: rgba(34, 197, 94, 0.25); border: 1px solid #22c55e; color: #4ade80; }
+    .status-suspendido { background: rgba(239, 68, 68, 0.25); border: 1px solid #ef4444; color: #f87171; }
+    
+    /* Tabs */
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.15); }
+    .tab-btn {
+        background: none;
+        border: none;
+        color: #aaa;
+        padding: 10px 15px;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+    }
+    .tab-btn.active { color: white; border-bottom-color: #2563eb; font-weight: bold; }
+    
+    /* Device List */
+    .device-card {
+        background: rgba(0, 0, 0, 0.45);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        backdrop-filter: blur(4px);
+    }
+    .device-info { font-size: 0.95rem; }
+    .btn-danger { background: #dc2626; }
+    .btn-danger:hover { background: #b91c1c; }
+    .inline-form { display: flex; gap: 8px; }
+</style>
+
 </head>
 <body>
 
