@@ -166,123 +166,117 @@
     </div>
 
     <script>
-        let usuarioActual = null;
-        let codigoGlobal = "";
+    let usuarioActual = null;
+    let codigoGlobal = "";
 
-        async function buscarUsuario() {
-    const codigo = document.getElementById('codigoInput').value.trim().toUpperCase();
-    if (!codigo) return;
-    codigoGlobal = codigo;
+    async function buscarUsuario() {
+        const codigo = document.getElementById('codigoInput').value.trim().toUpperCase();
+        if (!codigo) return;
+        codigoGlobal = codigo;
 
-    try {
-        const res = await fetch(`/api/usuario/${codigo}`);
-        const json = await res.json();
-        
-        // ESTO TE MOSTRARÁ EXACTAMENTE QUÉ DEVUELVE PYTHON EN LA CONSOLA (F12)
-        console.log("Estructura completa recibida:", json);
+        try {
+            const res = await fetch(`/api/usuario/${codigo}`);
+            const json = await res.json();
 
-        // Si tu Python devuelve los datos directo sin la clave "success", lo manejamos acá:
-        if (json.success === true || json.estado) {
-            usuarioActual = json.data || json; // Soporta ambos formatos
-            renderizarInterfaz();
-        } else {
-            alert(json.message || "No se encontró información para este código.");
+            if (json.success) {
+                usuarioActual = json.data;
+                renderizarInterfaz();
+            } else {
+                alert(json.message);
+            }
+        } catch (err) {
+            alert("Error al conectar con el servidor.");
         }
-    } catch (err) {
-        console.error("Error crítico:", err);
-        alert("Error al conectar con el servidor.");
     }
 
-        function renderizarInterfaz() {
-            document.getElementById('resultado').style.display = 'block';
-            const banner = document.getElementById('statusBanner');
-            
-            if (usuarioActual.estado === 'activo') {
-                banner.className = 'status-card status-activo';
-                banner.innerHTML = `🟢 <b>ESTADO: ACTIVO / PROTEGIDO</b><br><small>📅 Vence el: ${usuarioActual.fecha_vencimiento || 'N/A'}</small>`;
-            } else {
-                banner.className = 'status-card status-suspendido';
-                banner.innerHTML = `🔴 <b>ESTADO: SUSPENDIDO / VENCIDO</b><br><small>⚠️ Tiempo expirado. Escaneo pausado.</small>`;
-            }
-
-            const dispositivos = usuarioActual.dispositivos_detectados || {};
-            const bautizados = [];
-            const sinBautizar = [];
-
-            Object.keys(dispositivos).forEach(mac => {
-                const disp = dispositivos[mac];
-                disp.macKey = mac;
-                disp.macFormatted = mac.replace(/_/g, ':');
-                if (disp.nombre_bautizado) bautizados.push(disp);
-                else sinBautizar.push(disp);
-            });
-
-            document.getElementById('countBautizados').innerText = bautizados.length;
-            document.getElementById('countSinBautizar').innerText = sinBautizar.length;
-
-            // Render Tab Bautizados
-            const containerB = document.getElementById('tabBautizados');
-            containerB.innerHTML = bautizados.length ? '' : '<p>No hay dispositivos bautizados.</p>';
-            bautizados.forEach(d => {
-                containerB.innerHTML += `
-                    <div class="device-card">
-                        <div class="device-info">
-                            🟢 <b>${d.nombre_bautizado}</b> | IP: <code>${d.ip || 'N/A'}</code> | MAC: <code>${d.macFormatted}</code> | Fab: ${d.fabricante || 'Desconocido'}
-                        </div>
-                        <button class="btn-danger" onclick="revocar('${d.macKey}')">🗑️ Revocar</button>
-                    </div>`;
-            });
-
-            // Render Tab Sin Bautizar
-            const containerSB = document.getElementById('tabSinBautizar');
-            containerSB.innerHTML = sinBautizar.length ? '' : '<p>Todos los dispositivos están bautizados.</p>';
-            sinBautizar.forEach(d => {
-                containerSB.innerHTML += `
-                    <div class="device-card">
-                        <div class="device-info">
-                            ⚠️ MAC: <code>${d.macFormatted}</code> | IP: <code>${d.ip || 'N/A'}</code> | Fab: ${d.fabricante || 'Desconocido'}
-                        </div>
-                        <div class="inline-form">
-                            <input type="text" id="input_${d.macKey}" placeholder="Ej: Smart TV">
-                            <button onclick="bautizar('${d.macKey}')">✍️ Bautizar</button>
-                        </div>
-                    </div>`;
-            });
+    function renderizarInterfaz() {
+        document.getElementById('resultado').style.display = 'block';
+        const banner = document.getElementById('statusBanner');
+        
+        if (usuarioActual.estado === 'activo') {
+            banner.className = 'status-card status-activo';
+            banner.innerHTML = `🟢 <b>ESTADO: ACTIVO / PROTEGIDO</b><br><small>📅 Vence el: ${usuarioActual.fecha_vencimiento || 'N/A'}</small>`;
+        } else {
+            banner.className = 'status-card status-suspendido';
+            banner.innerHTML = `🔴 <b>ESTADO: SUSPENDIDO / VENCIDO</b><br><small>⚠️ Tiempo expirado. Escaneo pausado.</small>`;
         }
 
-        async function bautizar(mac) {
-            const nombre = document.getElementById(`input_${mac}`).value.trim();
-            if (!nombre) return alert("Ingresa un nombre");
+        const dispositivos = usuarioActual.dispositivos_detectados || {};
+        const bautizados = [];
+        const sinBautizar = [];
 
-            await fetch('/api/bautizar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ codigo: codigoGlobal, mac, nombre })
-            });
-            buscarUsuario();
-        }
+        Object.keys(dispositivos).forEach(mac => {
+            const disp = dispositivos[mac];
+            disp.macKey = mac;
+            disp.macFormatted = mac.replace(/_/g, ':');
+            if (disp.nombre_bautizado) bautizados.push(disp);
+            else sinBautizar.push(disp);
+        });
 
-        async function revocar(mac) {
-            await fetch('/api/revocar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ codigo: codigoGlobal, mac })
-            });
-            buscarUsuario();
-        }
+        document.getElementById('countBautizados').innerText = bautizados.length;
+        document.getElementById('countSinBautizar').innerText = sinBautizar.length;
 
-        function switchTab(tab) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            if (tab === 'bautizados') {
-                document.getElementById('tabBautizados').style.display = 'block';
-                document.getElementById('tabSinBautizar').style.display = 'none';
-                event.target.classList.add('active');
-            } else {
-                document.getElementById('tabBautizados').style.display = 'none';
-                document.getElementById('tabSinBautizar').style.display = 'block';
-                event.target.classList.add('active');
-            }
+        const containerB = document.getElementById('tabBautizados');
+        containerB.innerHTML = bautizados.length ? '' : '<p>No hay dispositivos bautizados.</p>';
+        bautizados.forEach(d => {
+            containerB.innerHTML += `
+                <div class="device-card">
+                    <div class="device-info">
+                        🟢 <b>${d.nombre_bautizado}</b> | IP: <code>${d.ip || 'N/A'}</code> | MAC: <code>${d.macFormatted}</code> | Fab: ${d.fabricante || 'Desconocido'}
+                    </div>
+                    <button class="btn-danger" onclick="revocar('${d.macKey}')">🗑️ Revocar</button>
+                </div>`;
+        });
+
+        const containerSB = document.getElementById('tabSinBautizar');
+        containerSB.innerHTML = sinBautizar.length ? '' : '<p>Todos los dispositivos están bautizados.</p>';
+        sinBautizar.forEach(d => {
+            containerSB.innerHTML += `
+                <div class="device-card">
+                    <div class="device-info">
+                        ⚠️ MAC: <code>${d.macFormatted}</code> | IP: <code>${d.ip || 'N/A'}</code> | Fab: ${d.fabricante || 'Desconocido'}
+                    </div>
+                    <div class="inline-form">
+                        <input type="text" id="input_${d.macKey}" placeholder="Ej: Smart TV">
+                        <button onclick="bautizar('${d.macKey}')">✍️ Bautizar</button>
+                    </div>
+                </div>`;
+        });
+    }
+
+    async function bautizar(mac) {
+        const nombre = document.getElementById(`input_${mac}`).value.trim();
+        if (!nombre) return alert("Ingresa un nombre");
+
+        await fetch('/api/bautizar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ codigo: codigoGlobal, mac, nombre })
+        });
+        buscarUsuario();
+    }
+
+    async function revocar(mac) {
+        await fetch('/api/revocar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ codigo: codigoGlobal, mac })
+        });
+        buscarUsuario();
+    }
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        if (tab === 'bautizados') {
+            document.getElementById('tabBautizados').style.display = 'block';
+            document.getElementById('tabSinBautizar').style.display = 'none';
+            event.target.classList.add('active');
+        } else {
+            document.getElementById('tabBautizados').style.display = 'none';
+            document.getElementById('tabSinBautizar').style.display = 'block';
+            event.target.classList.add('active');
         }
-    </script>
+    }
+</script>
 </body>
 </html>
