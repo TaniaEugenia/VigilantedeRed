@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+python appvigilantedered.pyfrom flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import firebase_admin
 from firebase_admin import credentials, db
@@ -15,18 +15,24 @@ if not firebase_admin._apps:
         cred_env = os.getenv("FIREBASE_CREDENTIALS")
         if cred_env:
             cred_dict = json.loads(cred_env)
+            cred = credentials.Certificate(cred_dict)
         else:
-            # Reemplaza o configura tus credenciales aquí o mediante variables de entorno
-            with open("firebase_keys.json", "r") as f:
+            # Revisa primero si está en /etc/secrets/ (ruta de Secret Files de Render)
+            secret_path = "/etc/secrets/firebase_keys.json"
+            local_path = "firebase_keys.json"
+            
+            path_to_use = secret_path if os.path.exists(secret_path) else local_path
+            
+            with open(path_to_use, "r") as f:
                 cred_dict = json.load(f)
+            cred = credentials.Certificate(cred_dict)
 
-        cred = credentials.Certificate(cred_dict)
         firebase_admin.initialize_app(cred, {
             'databaseURL': 'https://vigilante-de-red-default-rtdb.firebaseio.com/'
         })
     except Exception as e:
         print(f"Error al inicializar Firebase: {e}")
-
+        
 # --- LÓGICA DE USUARIO ---
 def obtener_y_verificar_usuario(codigo):
     ref = db.reference(f'usuarios/{codigo}')
