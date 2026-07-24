@@ -37,7 +37,7 @@ def obtener_y_verificar_usuario(codigo):
     ref = db.reference(f'usuarios/{codigo}')
     usuario_data = ref.get()
     
-    if not usuario_data:
+    if not usuario_data or not isinstance(usuario_data, dict):
         return None
         
     estado_actual = usuario_data.get('estado', 'activo')
@@ -45,7 +45,7 @@ def obtener_y_verificar_usuario(codigo):
     
     if not fecha_venc_str and usuario_data.get('fecha_creacion'):
         try:
-            fecha_c_str = usuario_data.get('fecha_creacion').split(".")[0]
+            fecha_c_str = str(usuario_data.get('fecha_creacion')).split(".")[0]
             fecha_c = datetime.datetime.strptime(fecha_c_str, "%Y-%m-%d %H:%M:%S")
             fecha_venc = fecha_c + datetime.timedelta(hours=24)
             fecha_venc_str = fecha_venc.strftime("%Y-%m-%d %H:%M:%S")
@@ -55,13 +55,16 @@ def obtener_y_verificar_usuario(codigo):
 
     if fecha_venc_str:
         try:
-            fecha_limite = datetime.datetime.strptime(fecha_venc_str.split(".")[0], "%Y-%m-%d %H:%M:%S")
+            fecha_limite = datetime.datetime.strptime(str(fecha_venc_str).split(".")[0], "%Y-%m-%d %H:%M:%S")
             if datetime.datetime.now() > fecha_limite or estado_actual == 'suspendido':
                 if estado_actual != 'suspendido':
                     ref.update({'estado': 'suspendido'})
                 usuario_data['estado'] = 'suspendido'
         except Exception as e:
             print(f"Error verificando tiempos: {e}")
+            
+    if 'dispositivos_detectados' not in usuario_data or not isinstance(usuario_data['dispositivos_detectados'], dict):
+        usuario_data['dispositivos_detectados'] = {}
             
     return usuario_data
 
