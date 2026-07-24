@@ -1,0 +1,6 @@
+Flask
+firebase-admin
+gunicorn
+requests
+pyTelegramBotAPI
+streamlit
