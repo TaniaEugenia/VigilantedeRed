@@ -7,43 +7,32 @@
 <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     
+    html, body {
+        height: 100%;
+        overflow-x: hidden;
+    }
+
     body {
-        position: relative;
         color: white;
         display: flex;
         min-height: 100vh;
-        background-color: #0d1117;
-    }
-
-    /* Fondo estático de alta visibilidad usando pseudoelemento (elimina el parpadeo/oscurecimiento) */
-    body::before {
-        content: "";
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-image: 
-            linear-gradient(rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05)), 
-            url('https://i.imgur.com/3YmgikW.png');
-        background-repeat: no-repeat;
-        background-position: center;
+        /* Ponemos la imagen directamente de fondo fijo sin degradados opacos */
+        background: #111 url('https://i.imgur.com/3YmgikW.png') no-repeat center center fixed;
         background-size: cover;
-        z-index: -1;
     }
 
-    /* Sidebar - Cristalino */
+    /* Sidebar - Ultratransparente */
     .sidebar {
         width: 280px;
-        background-color: rgba(0, 0, 0, 0.3) !important; 
+        background-color: rgba(0, 0, 0, 0.25) !important; 
         padding: 20px;
         border-right: 1px solid rgba(255, 255, 255, 0.15);
-        backdrop-filter: blur(6px) !important;
+        backdrop-filter: blur(4px);
     }
     .sidebar h3 { margin-bottom: 20px; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
     
     .btn-mp {
-        background-color: rgba(20, 20, 20, 0.6);
+        background-color: rgba(0, 0, 0, 0.4);
         color: #fff;
         padding: 12px;
         border-radius: 8px;
@@ -57,14 +46,13 @@
         border: 1px solid rgba(255, 255, 255, 0.2);
         transition: 0.3s;
     }
-    .btn-mp:hover { background-color: rgba(50, 50, 50, 0.8); border-color: #888; }
+    .btn-mp:hover { background-color: rgba(255, 255, 255, 0.2); border-color: #fff; }
     
-    /* Main Container - Sin sombras oscuras */
+    /* Main Content - Fondo 100% transparente para que no sume sombras al crecer */
     .main-content {
         flex: 1;
         padding: 30px;
-        background: rgba(10, 10, 10, 0.15) !important;
-        backdrop-filter: blur(4px) !important;
+        background: transparent !important;
     }
     h1 { font-size: 1.8rem; margin-bottom: 20px; text-shadow: 0 2px 5px rgba(0,0,0,0.9); }
     
@@ -78,8 +66,8 @@
         flex: 1;
         padding: 12px;
         border-radius: 6px;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        background: rgba(0, 0, 0, 0.4);
         color: white;
         font-size: 1rem;
     }
@@ -102,10 +90,10 @@
         border-radius: 8px;
         margin-bottom: 25px;
         font-size: 1.1rem;
-        backdrop-filter: blur(5px);
+        backdrop-filter: blur(4px);
     }
-    .status-activo { background: rgba(34, 197, 94, 0.3); border: 1px solid #22c55e; color: #4ade80; }
-    .status-suspendido { background: rgba(239, 68, 68, 0.3); border: 1px solid #ef4444; color: #f87171; }
+    .status-activo { background: rgba(34, 197, 94, 0.25); border: 1px solid #22c55e; color: #4ade80; }
+    .status-suspendido { background: rgba(239, 68, 68, 0.25); border: 1px solid #ef4444; color: #f87171; }
     
     /* Tabs */
     .tabs { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.2); }
@@ -122,7 +110,7 @@
     
     /* Device List */
     .device-card {
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.35);
         border: 1px solid rgba(255, 255, 255, 0.15);
         padding: 15px;
         border-radius: 8px;
@@ -137,12 +125,11 @@
     .btn-danger:hover { background: #b91c1c; }
     .inline-form { display: flex; gap: 8px; }
 
-    /* Forzar transparencia total en el contenedor dinámico */
+    /* Asegurar que el contenedor dinámico no interfiera con el fondo */
     #resultado {
         background: transparent !important;
     }
 </style>
-
 </head>
 <body>
 
