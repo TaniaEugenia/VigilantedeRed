@@ -17,7 +17,6 @@ if not firebase_admin._apps:
             cred_dict = json.loads(cred_env)
             cred = credentials.Certificate(cred_dict)
         else:
-            # Revisa primero si está en /etc/secrets/ (ruta de Secret Files de Render)
             secret_path = "/etc/secrets/firebase_keys.json"
             local_path = "firebase_keys.json"
             
@@ -110,5 +109,4 @@ def revocar():
     return jsonify({"success": False, "message": "Datos incompletos"}), 400
 
 if __name__ == '__main__':
-    # host 0.0.0.0 permite que se abra desde otras PC en tu red local
     app.run(host='0.0.0.0', port=5000, debug=True)
