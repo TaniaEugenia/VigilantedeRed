@@ -165,25 +165,26 @@
         let usuarioActual = null;
         let codigoGlobal = "";
 
-        async function buscarUsuario() {
-            const codigo = document.getElementById('codigoInput').value.trim().toUpperCase();
-            if (!codigo) return;
-            codigoGlobal = codigo;
+       async function buscarUsuario() {
+    const codigo = document.getElementById('codigoInput').value.trim().toUpperCase();
+    if (!codigo) return;
+    codigoGlobal = codigo;
 
-            try {
-                const res = await fetch(`/api/usuario/${codigo}`);
-                const json = await res.json();
+    try {
+        const res = await fetch(`/api/usuario/${codigo}`);
+        const json = await res.json();
 
-                if (json.success) {
-                    usuarioActual = json.data;
-                    renderizarInterfaz();
-                } else {
-                    alert(json.message);
-                }
-            } catch (err) {
-                alert("Error al conectar con el servidor.");
-            }
+        if (json.success) {
+            usuarioActual = json.data;
+            renderizarInterfaz();
+        } else {
+            alert(json.message || "El código ingresado no existe.");
+            document.getElementById('resultado').style.display = 'none';
         }
+    } catch (err) {
+        alert("Error al conectar con el servidor.");
+    }
+
 
         function renderizarInterfaz() {
             document.getElementById('resultado').style.display = 'block';

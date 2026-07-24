@@ -37,6 +37,7 @@ def obtener_y_verificar_usuario(codigo):
     ref = db.reference(f'usuarios/{codigo}')
     usuario_data = ref.get()
     
+    # Si el código no existe en la base de datos, retornamos None limpiamente
     if not usuario_data or not isinstance(usuario_data, dict):
         return None
         
