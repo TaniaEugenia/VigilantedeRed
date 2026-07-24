@@ -26,10 +26,11 @@
     }
 
     .sidebar {
-        width: 280px;
+        width: 320px;
         background-color: rgba(0, 0, 0, 0.45) !important; 
         padding: 20px;
         border-right: 1px solid rgba(255, 255, 255, 0.15);
+        overflow-y: auto;
     }
     .sidebar h3 { margin-bottom: 20px; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
     
@@ -50,10 +51,53 @@
     }
     .btn-mp:hover { background-color: rgba(255, 255, 255, 0.2); border-color: #fff; }
     
+    /* Estilos para la sección de pasos */
+    .instrucciones-container {
+        background-color: rgba(30, 41, 59, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 15px;
+        color: #e2e8f0;
+        font-size: 0.85rem;
+        text-align: left;
+    }
+
+    .instrucciones-container h3 {
+        color: #38bdf8;
+        font-size: 0.95rem;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+
+    .instrucciones-container ol {
+        padding-left: 18px;
+        margin-bottom: 12px;
+    }
+
+    .instrucciones-container li {
+        margin-bottom: 8px;
+        line-height: 1.3;
+    }
+
+    .instrucciones-nota {
+        background-color: rgba(56, 189, 248, 0.08);
+        border-left: 3px solid #38bdf8;
+        padding: 8px 10px;
+        border-radius: 0 6px 6px 0;
+        font-size: 0.8rem;
+    }
+
+    .instrucciones-nota p {
+        margin: 0;
+        line-height: 1.3;
+    }
+
     .main-content {
         flex: 1;
         padding: 30px;
         background: transparent !important;
+        overflow-y: auto;
     }
     h1 { font-size: 1.8rem; margin-bottom: 20px; text-shadow: 0 2px 5px rgba(0,0,0,0.9); }
     
@@ -143,15 +187,31 @@
         <a href="https://drive.google.com/uc?export=download&id=18sE_N-HOqWwyXGUMxf1V_wpTgPS0h9Cv" class="btn-mp" style="background-color: #1e3a8a; margin-top: 20px;">
             📥 Descargar Escáner (.exe)
         </a>
+
+        <!-- Sección de Pasos / Instrucciones -->
+        <div class="instrucciones-container">
+            <h3>📋 Puesta en marcha:</h3>
+            <ol>
+                <li><strong>Descargar <code>Escaner.exe</code> en tu PC.</strong> (Esto permite la lectura de la placa de red y la línea wifi que ingresa).</li>
+                <li><strong>Guarda tu contraseña</strong> que aparece en la ventana.</li>
+                <li><strong>Dale el alta</strong> en <a href="https://web.telegram.org/a/#8709241753" target="_blank" style="color: #38bdf8;">@vigilantedered_bot</a>.</li>
+                <li><strong>Reconoce a tus dispositivos</strong> por MAC e IP. Arma tu lista.</li>
+            </ol>
+            <div class="instrucciones-nota">
+                <p>⚠️ <strong>¿Desconocés algún dispositivo?</strong> En caso de no poder identificar a algunos dispositivos, pide el cambio de contraseña con tu operador. Si persiste el ingreso y no lo reconoces aún, pídele a tu operador la posibilidad de bloquear el ingreso a ese dispositivo para poder proteger no solamente tu banda ancha, sino también tus datos.</p>
+            </div>
+        </div>
+
         <!-- Botón para ir al Bot de Telegram -->
-        <a href="https://web.telegram.org/a/#8709241753" target="_blank" class="btn-mp" style="background-color: #0284c7; margin-top: 10px;">
+        <a href="https://web.telegram.org/a/#8709241753" target="_blank" class="btn-mp" style="background-color: #0284c7; margin-top: 15px;">
             🤖 Ir al Bot de Telegram
         </a>
+
         <!-- Enlace a Términos y Condiciones -->
         <div style="margin-top: 30px; font-size: 0.8rem; text-align: center; color: rgba(255, 255, 255, 0.6); border-top: 1px solid rgba(255, 255, 255, 0.15); padding-top: 15px;">
-           <a href="terminos.html" target="_blank">📄 Términos y Condiciones</a>
+            <a href="terminos.html" target="_blank" style="color: #38bdf8; text-decoration: none;">📄 Términos y Condiciones</a>
         </div>
-    </div> <!-- AQUÍ FALTABA ESTE CIERRE DE LA SIDEBAR -->
+    </div>
     
     <div class="main-content">
         <h1>🛡️ VIGILANTE DE RED - PANEL DE CONTROL</h1>
