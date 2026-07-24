@@ -2,3 +2,4 @@ serviceAccountKey.json
 *.exe
 __pycache__/
 *.toml
+mi-panel-vigilante/firebase_keys.json
