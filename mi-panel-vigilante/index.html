@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vigilante de Red - Panel de Control</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body {
+            background: #121212 url('https://i.imgur.com/3YmgikW.png') no-repeat center center fixed;
+            background-size: cover;
+            color: white;
+            display: flex;
+            min-height: 100vh;
+        }
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background-color: rgba(0, 0, 0, 0.85);
+            padding: 20px;
+            border-right: 1px solid #333;
+            backdrop-filter: blur(5px);
+        }
+        .sidebar h3 { margin-bottom: 20px; font-size: 1.1rem; color: #ddd; }
+        .btn-mp {
+            background-color: #222;
+            color: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            border: 1px solid #444;
+            transition: 0.3s;
+        }
+        .btn-mp:hover { background-color: #333; border-color: #666; }
+        
+        /* Main Container */
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            background: rgba(18, 18, 18, 0.75);
+            backdrop-filter: blur(8px);
+        }
+        h1 { font-size: 1.8rem; margin-bottom: 20px; }
+        
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            max-width: 500px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: #000;
+            color: white;
+            font-size: 1rem;
+        }
+        button {
+            padding: 12px 20px;
+            border-radius: 6px;
+            border: none;
+            background: #2563eb;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:hover { background: #1d4ed8; }
+        
+        /* Status Banner */
+        .status-card {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            font-size: 1.1rem;
+        }
+        .status-activo { background: rgba(34, 197, 94, 0.15); border: 1px solid #22c55e; color: #4ade80; }
+        .status-suspendido { background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171; }
+        
+        /* Tabs */
+        .tabs { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid #333; }
+        .tab-btn {
+            background: none;
+            border: none;
+            color: #aaa;
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        .tab-btn.active { color: white; border-bottom-color: #2563eb; }
+        
+        /* Device List */
+        .device-card {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #333;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .device-info { font-size: 0.95rem; }
+        .btn-danger { background: #dc2626; }
+        .btn-danger:hover { background: #b91c1c; }
+        .inline-form { display: flex; gap: 8px; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h3>Gestión de Acceso</h3>
+        <a href="https://mpago.la/1NqWsQf" target="_blank" class="btn-mp">
+            <img src="https://images.seeklogo.com/logo-png/19/1/mercadopago-logo-png_seeklogo-199533.png" width="20" alt="MP">
+            Pagar 24hs ($10.000)
+        </a>
+        <a href="https://mpago.la/2N8NvtF" target="_blank" class="btn-mp">
+            <img src="https://images.seeklogo.com/logo-png/19/1/mercadopago-logo-png_seeklogo-199533.png" width="20" alt="MP">
+            Pagar 30 días ($20.000)
+        </a>
+    </div>
+
+    <div class="main-content">
+        <h1>🛡️ VIGILANTE DE RED - PANEL DE CONTROL</h1>
+        
+        <div class="search-box">
+            <input type="text" id="codigoInput" placeholder="Ingrese el código VIG-XXXX">
+            <button onclick="buscarUsuario()">Consultar</button>
+        </div>
+
+        <div id="resultado" style="display: none;">
+            <div id="statusBanner" class="status-card"></div>
+
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('bautizados')">✅ Bautizados (<span id="countBautizados">0</span>)</button>
+                <button class="tab-btn" onclick="switchTab('sinBautizar')">⚠️ Sin Bautizar (<span id="countSinBautizar">0</span>)</button>
+            </div>
+
+            <div id="tabBautizados"></div>
+            <div id="tabSinBautizar" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        let usuarioActual = null;
+        let codigoGlobal = "";
+
+        async function buscarUsuario() {
+            const codigo = document.getElementById('codigoInput').value.trim().toUpperCase();
+            if (!codigo) return;
+            codigoGlobal = codigo;
+
+            try {
+                const res = await fetch(`/api/usuario/${codigo}`);
+                const json = await res.json();
+
+                if (json.success) {
+                    usuarioActual = json.data;
+                    renderizarInterfaz();
+                } else {
+                    alert(json.message);
+                }
+            } catch (err) {
+                alert("Error al conectar con el servidor.");
+            }
+        }
+
+        function renderizarInterfaz() {
+            document.getElementById('resultado').style.display = 'block';
+            const banner = document.getElementById('statusBanner');
+            
+            if (usuarioActual.estado === 'activo') {
+                banner.className = 'status-card status-activo';
+                banner.innerHTML = `🟢 <b>ESTADO: ACTIVO / PROTEGIDO</b><br><small>📅 Vence el: ${usuarioActual.fecha_vencimiento || 'N/A'}</small>`;
+            } else {
+                banner.className = 'status-card status-suspendido';
+                banner.innerHTML = `🔴 <b>ESTADO: SUSPENDIDO / VENCIDO</b><br><small>⚠️ Tiempo expirado. Escaneo pausado.</small>`;
+            }
+
+            const dispositivos = usuarioActual.dispositivos_detectados || {};
+            const bautizados = [];
+            const sinBautizar = [];
+
+            Object.keys(dispositivos).forEach(mac => {
+                const disp = dispositivos[mac];
+                disp.macKey = mac;
+                disp.macFormatted = mac.replace(/_/g, ':');
+                if (disp.nombre_bautizado) bautizados.push(disp);
+                else sinBautizar.push(disp);
+            });
+
+            document.getElementById('countBautizados').innerText = bautizados.length;
+            document.getElementById('countSinBautizar').innerText = sinBautizar.length;
+
+            // Render Tab Bautizados
+            const containerB = document.getElementById('tabBautizados');
+            containerB.innerHTML = bautizados.length ? '' : '<p>No hay dispositivos bautizados.</p>';
+            bautizados.forEach(d => {
+                containerB.innerHTML += `
+                    <div class="device-card">
+                        <div class="device-info">
+                            🟢 <b>${d.nombre_bautizado}</b> | IP: <code>${d.ip || 'N/A'}</code> | MAC: <code>${d.macFormatted}</code> | Fab: ${d.fabricante || 'Desconocido'}
+                        </div>
+                        <button class="btn-danger" onclick="revocar('${d.macKey}')">🗑️ Revocar</button>
+                    </div>`;
+            });
+
+            // Render Tab Sin Bautizar
+            const containerSB = document.getElementById('tabSinBautizar');
+            containerSB.innerHTML = sinBautizar.length ? '' : '<p>Todos los dispositivos están bautizados.</p>';
+            sinBautizar.forEach(d => {
+                containerSB.innerHTML += `
+                    <div class="device-card">
+                        <div class="device-info">
+                            ⚠️ MAC: <code>${d.macFormatted}</code> | IP: <code>${d.ip || 'N/A'}</code> | Fab: ${d.fabricante || 'Desconocido'}
+                        </div>
+                        <div class="inline-form">
+                            <input type="text" id="input_${d.macKey}" placeholder="Ej: Smart TV">
+                            <button onclick="bautizar('${d.macKey}')">✍️ Bautizar</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        async function bautizar(mac) {
+            const nombre = document.getElementById(`input_${mac}`).value.trim();
+            if (!nombre) return alert("Ingresa un nombre");
+
+            await fetch('/api/bautizar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ codigo: codigoGlobal, mac, nombre })
+            });
+            buscarUsuario();
+        }
+
+        async function revocar(mac) {
+            await fetch('/api/revocar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ codigo: codigoGlobal, mac })
+            });
+            buscarUsuario();
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            if (tab === 'bautizados') {
+                document.getElementById('tabBautizados').style.display = 'block';
+                document.getElementById('tabSinBautizar').style.display = 'none';
+                event.target.classList.add('active');
+            } else {
+                document.getElementById('tabBautizados').style.display = 'none';
+                document.getElementById('tabSinBautizar').style.display = 'block';
+                event.target.classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>
