@@ -170,24 +170,28 @@
         let codigoGlobal = "";
 
         async function buscarUsuario() {
-            const codigo = document.getElementById('codigoInput').value.trim().toUpperCase();
-            if (!codigo) return;
-            codigoGlobal = codigo;
+    const codigo = document.getElementById('codigoInput').value.trim().toUpperCase();
+    if (!codigo) return;
+    codigoGlobal = codigo;
 
-            try {
-                const res = await fetch(`/api/usuario/${codigo}`);
-                const json = await res.json();
+    try {
+        const res = await fetch(`/api/usuario/${codigo}`);
+        const json = await res.json();
+        
+        // ESTO TE MOSTRARÁ EXACTAMENTE QUÉ DEVUELVE PYTHON EN LA CONSOLA (F12)
+        console.log("Estructura completa recibida:", json);
 
-                if (json.success) {
-                    usuarioActual = json.data;
-                    renderizarInterfaz();
-                } else {
-                    alert(json.message);
-                }
-            } catch (err) {
-                alert("Error al conectar con el servidor.");
-            }
+        // Si tu Python devuelve los datos directo sin la clave "success", lo manejamos acá:
+        if (json.success === true || json.estado) {
+            usuarioActual = json.data || json; // Soporta ambos formatos
+            renderizarInterfaz();
+        } else {
+            alert(json.message || "No se encontró información para este código.");
         }
+    } catch (err) {
+        console.error("Error crítico:", err);
+        alert("Error al conectar con el servidor.");
+    }
 
         function renderizarInterfaz() {
             document.getElementById('resultado').style.display = 'block';
