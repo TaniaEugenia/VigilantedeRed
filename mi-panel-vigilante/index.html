@@ -8,22 +8,37 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     
     body {
-        /* Fondo con imagen e iluminación reforzada */
-        background: #111 url('https://i.imgur.com/3YmgikW.png') no-repeat center center fixed !important;
-        background-size: cover !important;
-        filter: brightness(1.4) contrast(1.15) !important; 
+        position: relative;
         color: white;
         display: flex;
         min-height: 100vh;
+        background-color: #0d1117;
     }
 
-    /* Sidebar - Ultratransparente */
+    /* Fondo estático de alta visibilidad usando pseudoelemento (elimina el parpadeo/oscurecimiento) */
+    body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: 
+            linear-gradient(rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05)), 
+            url('https://i.imgur.com/3YmgikW.png');
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: cover;
+        z-index: -1;
+    }
+
+    /* Sidebar - Cristalino */
     .sidebar {
         width: 280px;
-        background-color: rgba(0, 0, 0, 0.25) !important; 
+        background-color: rgba(0, 0, 0, 0.3) !important; 
         padding: 20px;
         border-right: 1px solid rgba(255, 255, 255, 0.15);
-        backdrop-filter: blur(4px) !important;
+        backdrop-filter: blur(6px) !important;
     }
     .sidebar h3 { margin-bottom: 20px; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
     
@@ -44,12 +59,12 @@
     }
     .btn-mp:hover { background-color: rgba(50, 50, 50, 0.8); border-color: #888; }
     
-    /* Main Container - Cristal super claro */
+    /* Main Container - Sin sombras oscuras */
     .main-content {
         flex: 1;
         padding: 30px;
         background: rgba(10, 10, 10, 0.15) !important;
-        backdrop-filter: blur(3px) !important;
+        backdrop-filter: blur(4px) !important;
     }
     h1 { font-size: 1.8rem; margin-bottom: 20px; text-shadow: 0 2px 5px rgba(0,0,0,0.9); }
     
@@ -64,7 +79,7 @@
         padding: 12px;
         border-radius: 6px;
         border: 1px solid rgba(255, 255, 255, 0.3);
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.6);
         color: white;
         font-size: 1rem;
     }
@@ -122,18 +137,9 @@
     .btn-danger:hover { background: #b91c1c; }
     .inline-form { display: flex; gap: 8px; }
 
-    /* --- FIX PARA CONTENEDOR DINÁMICO #RESULTADO --- */
+    /* Forzar transparencia total en el contenedor dinámico */
     #resultado {
         background: transparent !important;
-        background-color: transparent !important;
-        box-shadow: none !important;
-    }
-
-    #resultado .card, 
-    #resultado .container, 
-    #resultado > div {
-        background: rgba(10, 10, 10, 0.25) !important;
-        backdrop-filter: blur(4px);
     }
 </style>
 
