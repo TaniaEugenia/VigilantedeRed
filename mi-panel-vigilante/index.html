@@ -4,31 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vigilante de Red - Panel de Control</title>
-    <style>
+<style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     
     body {
-        /* Fondo con ajuste de brillo y contraste */
-        background: #000 url('https://i.imgur.com/3YmgikW.png') no-repeat center center fixed;
-        background-size: cover;
-        filter: brightness(1.15) contrast(1.05); /* Le da más luz y viveza al fondo */
+        /* Fondo con imagen de Imgur e iluminación reforzada */
+        background: #111 url('https://i.imgur.com/3YmgikW.png') no-repeat center center fixed !important;
+        background-size: cover !important;
+        /* Aumentamos brillo y contraste para levantar la imagen */
+        filter: brightness(1.4) contrast(1.15) !important; 
         color: white;
         display: flex;
         min-height: 100vh;
     }
 
-    /* Sidebar - Fondo semitransparente para ver el fondo */
+    /* Sidebar - Ultratransparente */
     .sidebar {
         width: 280px;
-        background-color: rgba(10, 10, 10, 0.45); /* Bajado a 45% de opacidad */
+        background-color: rgba(0, 0, 0, 0.25) !important; 
         padding: 20px;
-        border-right: 1px solid rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px); /* Desenfoque elegante de fondo */
+        border-right: 1px solid rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(4px) !important;
     }
-    .sidebar h3 { margin-bottom: 20px; font-size: 1.1rem; color: #ddd; }
+    .sidebar h3 { margin-bottom: 20px; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
     
     .btn-mp {
-        background-color: rgba(25, 25, 25, 0.7);
+        background-color: rgba(20, 20, 20, 0.6);
         color: #fff;
         padding: 12px;
         border-radius: 8px;
@@ -39,19 +40,19 @@
         gap: 10px;
         font-weight: bold;
         margin-bottom: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         transition: 0.3s;
     }
-    .btn-mp:hover { background-color: rgba(50, 50, 50, 0.8); border-color: #666; }
+    .btn-mp:hover { background-color: rgba(50, 50, 50, 0.8); border-color: #888; }
     
-    /* Main Container - Fondo cristalino */
+    /* Main Container - Cristal super claro */
     .main-content {
         flex: 1;
         padding: 30px;
-        background: rgba(15, 15, 15, 0.35); /* Bajado a 35% para revelar la imagen */
-        backdrop-filter: blur(8px);
+        background: rgba(10, 10, 10, 0.15) !important; /* Casi completamente transparente */
+        backdrop-filter: blur(3px) !important;
     }
-    h1 { font-size: 1.8rem; margin-bottom: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+    h1 { font-size: 1.8rem; margin-bottom: 20px; text-shadow: 0 2px 5px rgba(0,0,0,0.9); }
     
     .search-box {
         display: flex;
@@ -63,8 +64,8 @@
         flex: 1;
         padding: 12px;
         border-radius: 6px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        background: rgba(0, 0, 0, 0.5);
         color: white;
         font-size: 1rem;
     }
@@ -77,6 +78,7 @@
         font-weight: bold;
         cursor: pointer;
         transition: 0.2s;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.5);
     }
     button:hover { background: #1d4ed8; }
     
@@ -88,25 +90,26 @@
         font-size: 1.1rem;
         backdrop-filter: blur(5px);
     }
-    .status-activo { background: rgba(34, 197, 94, 0.25); border: 1px solid #22c55e; color: #4ade80; }
-    .status-suspendido { background: rgba(239, 68, 68, 0.25); border: 1px solid #ef4444; color: #f87171; }
+    .status-activo { background: rgba(34, 197, 94, 0.3); border: 1px solid #22c55e; color: #4ade80; }
+    .status-suspendido { background: rgba(239, 68, 68, 0.3); border: 1px solid #ef4444; color: #f87171; }
     
     /* Tabs */
-    .tabs { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.15); }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.2); }
     .tab-btn {
         background: none;
         border: none;
-        color: #aaa;
+        color: #ddd;
         padding: 10px 15px;
         cursor: pointer;
         border-bottom: 2px solid transparent;
+        font-weight: 500;
     }
     .tab-btn.active { color: white; border-bottom-color: #2563eb; font-weight: bold; }
     
     /* Device List */
     .device-card {
-        background: rgba(0, 0, 0, 0.45);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.15);
         padding: 15px;
         border-radius: 8px;
         margin-bottom: 12px;
