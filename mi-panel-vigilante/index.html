@@ -8,10 +8,9 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     
     body {
-        /* Fondo con imagen de Imgur e iluminación reforzada */
+        /* Fondo con imagen e iluminación reforzada */
         background: #111 url('https://i.imgur.com/3YmgikW.png') no-repeat center center fixed !important;
         background-size: cover !important;
-        /* Aumentamos brillo y contraste para levantar la imagen */
         filter: brightness(1.4) contrast(1.15) !important; 
         color: white;
         display: flex;
@@ -49,7 +48,7 @@
     .main-content {
         flex: 1;
         padding: 30px;
-        background: rgba(10, 10, 10, 0.15) !important; /* Casi completamente transparente */
+        background: rgba(10, 10, 10, 0.15) !important;
         backdrop-filter: blur(3px) !important;
     }
     h1 { font-size: 1.8rem; margin-bottom: 20px; text-shadow: 0 2px 5px rgba(0,0,0,0.9); }
@@ -122,6 +121,20 @@
     .btn-danger { background: #dc2626; }
     .btn-danger:hover { background: #b91c1c; }
     .inline-form { display: flex; gap: 8px; }
+
+    /* --- FIX PARA CONTENEDOR DINÁMICO #RESULTADO --- */
+    #resultado {
+        background: transparent !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+    }
+
+    #resultado .card, 
+    #resultado .container, 
+    #resultado > div {
+        background: rgba(10, 10, 10, 0.25) !important;
+        backdrop-filter: blur(4px);
+    }
 </style>
 
 </head>
