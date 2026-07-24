@@ -152,8 +152,8 @@
             <div id="statusBanner" class="status-card"></div>
 
             <div class="tabs">
-                <button class="tab-btn active" onclick="switchTab('bautizados')">✅ Bautizados (<span id="countBautizados">0</span>)</button>
-                <button class="tab-btn" onclick="switchTab('sinBautizar')">⚠️ Sin Bautizar (<span id="countSinBautizar">0</span>)</button>
+                <button class="tab-btn active" onclick="switchTab('bautizados', event)">✅ Bautizados (<span id="countBautizados">0</span>)</button>
+                <button class="tab-btn" onclick="switchTab('sinBautizar', event)">⚠️ Sin Bautizar (<span id="countSinBautizar">0</span>)</button>
             </div>
 
             <div id="tabBautizados"></div>
@@ -165,26 +165,26 @@
         let usuarioActual = null;
         let codigoGlobal = "";
 
-       async function buscarUsuario() {
-    const codigo = document.getElementById('codigoInput').value.trim().toUpperCase();
-    if (!codigo) return;
-    codigoGlobal = codigo;
+        async function buscarUsuario() {
+            const codigo = document.getElementById('codigoInput').value.trim().toUpperCase();
+            if (!codigo) return;
+            codigoGlobal = codigo;
 
-    try {
-        const res = await fetch(`/api/usuario/${codigo}`);
-        const json = await res.json();
+            try {
+                const res = await fetch(`/api/usuario/${codigo}`);
+                const json = await res.json();
 
-        if (json.success) {
-            usuarioActual = json.data;
-            renderizarInterfaz();
-        } else {
-            alert(json.message || "El código ingresado no existe.");
-            document.getElementById('resultado').style.display = 'none';
-        }
-    } catch (err) {
-        alert("Error al conectar con el servidor.");
-    }
-
+                if (json.success) {
+                    usuarioActual = json.data;
+                    renderizarInterfaz();
+                } else {
+                    alert(json.message || "El código ingresado no existe.");
+                    document.getElementById('resultado').style.display = 'none';
+                }
+            } catch (err) {
+                alert("Error al conectar con el servidor.");
+            }
+        } <!-- AQUÍ FALTABA CERRAR LA LLAVE DE buscarUsuario -->
 
         function renderizarInterfaz() {
             document.getElementById('resultado').style.display = 'block';
@@ -204,17 +204,19 @@
 
             Object.keys(dispositivos).forEach(mac => {
                 const disp = dispositivos[mac];
-                disp.macKey = mac;
-                disp.macFormatted = mac.replace(/_/g, ':');
-                if (disp.nombre_bautizado) bautizados.push(disp);
-                else sinBautizar.push(disp);
+                if (disp) {
+                    disp.macKey = mac;
+                    disp.macFormatted = mac.replace(/_/g, ':');
+                    if (disp.nombre_bautizado) bautizados.push(disp);
+                    else sinBautizar.push(disp);
+                }
             });
 
             document.getElementById('countBautizados').innerText = bautizados.length;
             document.getElementById('countSinBautizar').innerText = sinBautizar.length;
 
             const containerB = document.getElementById('tabBautizados');
-            containerB.innerHTML = bautizados.length ? '' : '<p>No hay dispositivos bautizados.</p>';
+            containerB.innerHTML = bautizados.length ? '' : '<p style="padding:10px; color:#aaa;">No hay dispositivos bautizados.</p>';
             bautizados.forEach(d => {
                 containerB.innerHTML += `
                     <div class="device-card">
@@ -226,7 +228,7 @@
             });
 
             const containerSB = document.getElementById('tabSinBautizar');
-            containerSB.innerHTML = sinBautizar.length ? '' : '<p>Todos los dispositivos están bautizados.</p>';
+            containerSB.innerHTML = sinBautizar.length ? '' : '<p style="padding:10px; color:#aaa;">Todos los dispositivos están bautizados.</p>';
             sinBautizar.forEach(d => {
                 containerSB.innerHTML += `
                     <div class="device-card">
@@ -242,7 +244,9 @@
         }
 
         async function bautizar(mac) {
-            const nombre = document.getElementById(`input_${mac}`).value.trim();
+            const inputEl = document.getElementById(`input_${mac}`);
+            if (!inputEl) return;
+            const nombre = inputEl.value.trim();
             if (!nombre) return alert("Ingresa un nombre");
 
             await fetch('/api/bautizar', {
@@ -262,16 +266,16 @@
             buscarUsuario();
         }
 
-        function switchTab(tab) {
+        function switchTab(tab, event) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             if (tab === 'bautizados') {
                 document.getElementById('tabBautizados').style.display = 'block';
                 document.getElementById('tabSinBautizar').style.display = 'none';
-                event.target.classList.add('active');
+                if (event && event.target) event.target.classList.add('active');
             } else {
                 document.getElementById('tabBautizados').style.display = 'none';
                 document.getElementById('tabSinBautizar').style.display = 'block';
-                event.target.classList.add('active');
+                if (event && event.target) event.target.classList.add('active');
             }
         }
     </script>
