@@ -206,9 +206,14 @@ def procesar_updates_telegram():
                         codigo = partes[1].upper() if len(partes) > 1 else None
                         if codigo:
                             try:
-                                db.reference(f'usuarios/{codigo}').update({'chat_id': chat_id})
-                                usuario_vinculado[chat_id] = codigo
-                                enviar_mensaje(chat_id, f"✅ Vinculado exitosamente al código: {codigo}.")
+                                # Verificación de existencia previa en Firebase
+                                usuario_ref = db.reference(f'usuarios/{codigo}')
+                                if usuario_ref.get() is not None:
+                                    usuario_ref.update({'chat_id': chat_id})
+                                    usuario_vinculado[chat_id] = codigo
+                                    enviar_mensaje(chat_id, f"✅ Vinculado exitosamente al código: {codigo}.")
+                                else:
+                                    enviar_mensaje(chat_id, f"❌ El código `{codigo}` no existe en la base de datos. Verificá si lo escribiste bien.")
                             except Exception as e:
                                 enviar_mensaje(chat_id, "❌ Error al conectar con la base de datos.")
                                 print(f"Error en /start Firebase: {e}")
