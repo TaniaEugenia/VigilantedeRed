@@ -74,10 +74,9 @@ def obtener_y_verificar_usuario(codigo):
 def serve_index():
     return send_from_directory('.', 'index.html')
 
-@app.route('/guia.html')
-@app.route('/GuiaVDR.html')
-def serve_guia():
-    return send_from_directory('.', 'GuiaVDR.html')
+@app.route('/guiavdr.html')
+def guia():
+    return send_from_directory('.', 'guiavdr.html')
 
 @app.route('/terminos.html')
 def terminos():
