@@ -38,14 +38,33 @@ def enviar_mensaje(chat_id, texto, reply_markup=None):
 def escuchar_firebase():
     def callback(event):
         if not event.data or not isinstance(event.data, dict): return
+        
+        ahora_timestamp = datetime.datetime.now().timestamp()
+
         for codigo, datos_usuario in event.data.items():
             chat_id = datos_usuario.get('chat_id')
             if not chat_id: continue
             
             dispositivos = datos_usuario.get('dispositivos_detectados', {})
             for mac, disp in dispositivos.items():
-                # Notifica si es intruso o si es un equipo detectado que aún no fue bautizado
-                if (disp.get('es_intruso') or not disp.get('nombre_bautizado')) and not disp.get('alerta_enviada'):
+                
+                # Si ya tiene nombre bautizado, no requiere acción
+                if disp.get('nombre_bautizado'):
+                    continue
+                
+                # Si el usuario eligió no recibir más avisos
+                if disp.get('silenciado'):
+                    continue
+
+                alerta_enviada = disp.get('alerta_enviada', False)
+                segundo_aviso_enviado = disp.get('segundo_aviso_enviado', False)
+                intervalo_hs = disp.get('intervalo_recordatorio_hs')
+                ultima_alerta_ts = disp.get('ultima_alerta_ts', 0)
+
+                # -------------------------------------------------------------
+                # CASO 1: PRIMER ESCANEO (Alerta inicial estándar)
+                # -------------------------------------------------------------
+                if not alerta_enviada:
                     es_intruso = disp.get('es_intruso', True)
                     titulo = "🚨 *¡INTRUSO DETECTADO!* 🚨" if es_intruso else "⚠️ *NUEVO DISPOSITIVO SIN BAUTIZAR* ⚠️"
                     
@@ -64,9 +83,63 @@ def escuchar_firebase():
                     ]]}
                     
                     enviar_mensaje(chat_id, mensaje, reply_markup=markup)
-                    # Marcamos para evitar spam repetido en tiempo real
-                    db.reference(f'usuarios/{codigo}/dispositivos_detectados/{mac}').update({'alerta_enviada': True})
-    
+                    
+                    db.reference(f'usuarios/{codigo}/dispositivos_detectados/{mac}').update({
+                        'alerta_enviada': True,
+                        'ultima_alerta_ts': ahora_timestamp
+                    })
+
+                # -------------------------------------------------------------
+                # CASO 2: SEGUNDO ESCANEO (Sigue sin nombre -> Preguntar horario/silenciar)
+                # -------------------------------------------------------------
+                elif alerta_enviada and not segundo_aviso_enviado and intervalo_hs is None:
+                    mensaje = (
+                        f"⏳ *EL DISPOSITIVO SIGUE SIN NOMBRE* ⏳\n\n"
+                        f"📍 *IP:* `{disp.get('ip', 'Desconocida')}`\n"
+                        f"🏷 *MAC:* `{mac.replace('_', ':')}`\n\n"
+                        f"Detectamos que el dispositivo continúa conectado sin bautizar.\n"
+                        f"¿Cada cuánto querés que te recordemos nombrarlo?"
+                    )
+                    
+                    markup = {"inline_keyboard": [
+                        [{"text": "✅ Bautizar Ahora", "callback_data": f"permitir|{codigo}|{mac}"}],
+                        [
+                            {"text": "⏱ 1 Hora", "callback_data": f"freq|1|{codigo}|{mac}"},
+                            {"text": "⏱ 4 Horas", "callback_data": f"freq|4|{codigo}|{mac}"},
+                            {"text": "⏱ 24 Horas", "callback_data": f"freq|24|{codigo}|{mac}"}
+                        ],
+                        [{"text": "🔕 No volver a notificar", "callback_data": f"silenciar|{codigo}|{mac}"}]
+                    ]}
+                    
+                    enviar_mensaje(chat_id, mensaje, reply_markup=markup)
+                    
+                    db.reference(f'usuarios/{codigo}/dispositivos_detectados/{mac}').update({
+                        'segundo_aviso_enviado': True,
+                        'ultima_alerta_ts': ahora_timestamp
+                    })
+
+                # -------------------------------------------------------------
+                # CASO 3: RECORDATORIOS POSTERIORES (Si eligió un intervalo de horas)
+                # -------------------------------------------------------------
+                elif intervalo_hs and (ahora_timestamp - ultima_alerta_ts) >= (intervalo_hs * 3600):
+                    mensaje = (
+                        f"🔔 *RECORDATORIO DE DISPOSITIVO* 🔔\n\n"
+                        f"📍 *IP:* `{disp.get('ip', 'Desconocida')}`\n"
+                        f"🏷 *MAC:* `{mac.replace('_', ':')}`\n\n"
+                        f"Este equipo sigue sin ser bautizado en tu red."
+                    )
+                    
+                    markup = {"inline_keyboard": [
+                        [{"text": "✅ Permitir y Bautizar", "callback_data": f"permitir|{codigo}|{mac}"}],
+                        [{"text": "🔕 No volver a notificar", "callback_data": f"silenciar|{codigo}|{mac}"}]
+                    ]}
+                    
+                    enviar_mensaje(chat_id, mensaje, reply_markup=markup)
+                    
+                    db.reference(f'usuarios/{codigo}/dispositivos_detectados/{mac}').update({
+                        'ultima_alerta_ts': ahora_timestamp
+                    })
+
     db.reference('usuarios').listen(callback)
 
 # --- BUCLE DE ACTUALIZACIONES (POLLING CON REQUESTS) ---
@@ -110,7 +183,47 @@ def procesar_updates_telegram():
                         except Exception as e:
                             print(f"Error al ignorar: {e}")
 
-                    # B) El cliente avisa que ya realizó el pago
+                    # B) Configuración de Frecuencia de Recordatorio
+                    elif data.startswith("freq|"):
+                        try:
+                            _, horas, codigo, mac = data.split("|")
+                            horas = int(horas)
+                            
+                            db.reference(f'usuarios/{codigo}/dispositivos_detectados/{mac}').update({
+                                'intervalo_recordatorio_hs': horas,
+                                'ultima_alerta_ts': datetime.datetime.now().timestamp()
+                            })
+                            
+                            url_edit = f"https://api.telegram.org/bot{TOKEN_TELEGRAM}/editMessageText"
+                            requests.post(url_edit, data={
+                                "chat_id": chat_id, 
+                                "message_id": message_id, 
+                                "text": f"⏱ ¡Entendido! Te recordaré sobre este dispositivo cada *{horas} hora(s)* si sigue sin bautizar.", 
+                                "parse_mode": "Markdown"
+                            })
+                        except Exception as e:
+                            print(f"Error guardando frecuencia: {e}")
+
+                    # C) Opción de Silenciar Permanentemente
+                    elif data.startswith("silenciar|"):
+                        try:
+                            _, codigo, mac = data.split("|")
+                            
+                            db.reference(f'usuarios/{codigo}/dispositivos_detectados/{mac}').update({
+                                'silenciado': True
+                            })
+                            
+                            url_edit = f"https://api.telegram.org/bot{TOKEN_TELEGRAM}/editMessageText"
+                            requests.post(url_edit, data={
+                                "chat_id": chat_id, 
+                                "message_id": message_id, 
+                                "text": "🔕 *Notificaciones desactivadas* para este dispositivo.", 
+                                "parse_mode": "Markdown"
+                            })
+                        except Exception as e:
+                            print(f"Error al silenciar dispositivo: {e}")
+
+                    # D) El cliente avisa que ya realizó el pago
                     elif data.startswith("avisar_"):
                         try:
                             partes = data.split("_")
@@ -134,7 +247,7 @@ def procesar_updates_telegram():
                         except Exception as e:
                             print(f"Error al procesar el aviso del cliente: {e}")
 
-                    # C) Administrador aprueba el pago e impacta Firebase
+                    # E) Administrador aprueba el pago e impacta Firebase
                     elif data.startswith("aprobar_"):
                         try:
                             partes = data.split("_")
@@ -179,7 +292,7 @@ def procesar_updates_telegram():
                         except Exception as e:
                             print(f"Error en aprobación del administrador: {e}")
 
-                    # D) Administrador rechaza la alerta de pago
+                    # F) Administrador rechaza la alerta de pago
                     elif data.startswith("rechazar_"):
                         try:
                             chat_cliente = int(data.split("_")[1])
@@ -206,7 +319,6 @@ def procesar_updates_telegram():
                         codigo = partes[1].upper() if len(partes) > 1 else None
                         if codigo:
                             try:
-                                # Verificación de existencia previa en Firebase
                                 usuario_ref = db.reference(f'usuarios/{codigo}')
                                 if usuario_ref.get() is not None:
                                     usuario_ref.update({'chat_id': chat_id})
@@ -220,7 +332,7 @@ def procesar_updates_telegram():
                         else:
                             enviar_mensaje(chat_id, "⚠️ Por favor ingresá el código. Ejemplo: `/start TU_CODIGO`")
                     
-                    # Comando /milista (MUESTRA BAUTIZADOS Y PENDIENTES POR SEPARADO)
+                    # Comando /milista
                     elif texto.startswith("/milista"):
                         codigo = usuario_vinculado.get(chat_id)
                         
