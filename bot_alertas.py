@@ -455,7 +455,7 @@ def procesar_updates_telegram():
                                 if not dispositivos:
                                     enviar_mensaje(chat_id, f"📋 *REPORTE DE RED (`{codigo}`)*\n\n_No hay dispositivos registrados._")
                                 else:
-                                    enviar_mensaje(chat_id, f"📋 *REPORTE Y GESTIÓN DE RED (`{codigo}`)*\n\nPresioná *Eliminar* si querés borrar un equipo de Firebase:")
+                                    enviar_mensaje(chat_id, f"📋 *REPORTE Y GESTIÓN DE RED (`{codigo}`)*\n\nPresioná *Eliminar* si querés borrar un equipo:")
                                     for mac, d in dispositivos.items():
                                         mac_clean = mac.replace('_', ':')
                                         nombre = d.get('nombre_bautizado')
@@ -488,7 +488,7 @@ def procesar_updates_telegram():
                             enviar_mensaje(chat_id, f"✅ Dispositivo \"{texto}\" bautizado y autorizado correctamente.")
                         except Exception as e:
                             print(f"Error guardando bautismo: {e}")
-                            enviar_mensaje(chat_id, "❌ Hubo un problema al guardar el nombre en Firebase.")
+                            enviar_mensaje(chat_id, "❌ Hubo un problema al guardar el nombre.")
                             
         time.sleep(1)
 
