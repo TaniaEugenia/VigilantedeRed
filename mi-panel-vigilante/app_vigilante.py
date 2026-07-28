@@ -69,10 +69,19 @@ def obtener_y_verificar_usuario(codigo):
             
     return usuario_data
 
-# --- RUTAS DE LA API ---
+# --- RUTAS DE LA API Y ARCHIVOS ESTÁTICOS ---
 @app.route('/')
 def serve_index():
     return send_from_directory('.', 'index.html')
+
+@app.route('/guia.html')
+@app.route('/GuiaVDR.html')
+def serve_guia():
+    return send_from_directory('.', 'GuiaVDR.html')
+
+@app.route('/terminos.html')
+def terminos():
+    return send_from_directory('.', 'terminos.html')
 
 @app.route('/api/usuario/<codigo>', methods=['GET'])
 def get_usuario(codigo):
@@ -111,8 +120,6 @@ def revocar():
         })
         return jsonify({"success": True})
     return jsonify({"success": False, "message": "Datos incompletos"}), 400
-@app.route('/terminos.html')
-def terminos():
-    return send_from_directory('.', 'terminos.html')
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
