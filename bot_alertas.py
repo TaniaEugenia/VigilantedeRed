@@ -77,10 +77,15 @@ def escuchar_firebase():
                         f"¿Querés darle un nombre y autorizarlo en tu red?"
                     )
                     
-                    markup = {"inline_keyboard": [[
-                        {"text": "✅ Permitir y Bautizar", "callback_data": f"permitir|{codigo}|{mac}"},
-                        {"text": "❌ Ignorar", "callback_data": f"ignorar|{mac}"}
-                    ]]}
+                    markup = {"inline_keyboard": [
+                        [
+                            {"text": "✅ Permitir y Bautizar", "callback_data": f"permitir|{codigo}|{mac}"},
+                            {"text": "❌ Ignorar", "callback_data": f"ignorar|{mac}"}
+                        ],
+                        [
+                            {"text": "🗑️ Eliminar Dispositivo", "callback_data": f"pre_eliminar|{codigo}|{mac}"}
+                        ]
+                    ]}
                     
                     enviar_mensaje(chat_id, mensaje, reply_markup=markup)
                     
@@ -108,7 +113,8 @@ def escuchar_firebase():
                             {"text": "⏱ 4 Horas", "callback_data": f"freq|4|{codigo}|{mac}"},
                             {"text": "⏱ 24 Horas", "callback_data": f"freq|24|{codigo}|{mac}"}
                         ],
-                        [{"text": "🔕 No volver a notificar", "callback_data": f"silenciar|{codigo}|{mac}"}]
+                        [{"text": "🔕 No volver a notificar", "callback_data": f"silenciar|{codigo}|{mac}"}],
+                        [{"text": "🗑️ Eliminar Dispositivo", "callback_data": f"pre_eliminar|{codigo}|{mac}"}]
                     ]}
                     
                     enviar_mensaje(chat_id, mensaje, reply_markup=markup)
@@ -131,7 +137,8 @@ def escuchar_firebase():
                     
                     markup = {"inline_keyboard": [
                         [{"text": "✅ Permitir y Bautizar", "callback_data": f"permitir|{codigo}|{mac}"}],
-                        [{"text": "🔕 No volver a notificar", "callback_data": f"silenciar|{codigo}|{mac}"}]
+                        [{"text": "🔕 No volver a notificar", "callback_data": f"silenciar|{codigo}|{mac}"}],
+                        [{"text": "🗑️ Eliminar Dispositivo", "callback_data": f"pre_eliminar|{codigo}|{mac}"}]
                     ]}
                     
                     enviar_mensaje(chat_id, mensaje, reply_markup=markup)
@@ -182,6 +189,63 @@ def procesar_updates_telegram():
                             requests.post(url_edit, data={"chat_id": chat_id, "message_id": message_id, "text": "👁️ Dispositivo ignorado por el momento.", "parse_mode": "Markdown"})
                         except Exception as e:
                             print(f"Error al ignorar: {e}")
+
+                    # ---------------------------------------------------------
+                    # FLUJO DE ELIMINACIÓN DE DISPOSITIVOS
+                    # ---------------------------------------------------------
+                    elif data.startswith("pre_eliminar|"):
+                        try:
+                            _, codigo, mac = data.split("|")
+                            mac_clean = mac.replace('_', ':')
+                            
+                            url_edit = f"https://api.telegram.org/bot{TOKEN_TELEGRAM}/editMessageText"
+                            mensaje_confirmar = (
+                                f"⚠️ *¿ESTÁS SEGURO?*\n\n"
+                                f"Vas a borrar el dispositivo con MAC `{mac_clean}` de la base de datos."
+                            )
+                            markup_confirmar = {"inline_keyboard": [
+                                [
+                                    {"text": "🚨 Confirmar eliminación", "callback_data": f"confirm_eliminar|{codigo}|{mac}"},
+                                    {"text": "↩️ Cancelar", "callback_data": f"cancel_eliminar|{codigo}|{mac}"}
+                                ]
+                            ]}
+                            
+                            requests.post(url_edit, data={
+                                "chat_id": chat_id,
+                                "message_id": message_id,
+                                "text": mensaje_confirmar,
+                                "parse_mode": "Markdown",
+                                "reply_markup": json.dumps(markup_confirmar)
+                            })
+                        except Exception as e:
+                            print(f"Error en pre_eliminar: {e}")
+
+                    elif data.startswith("confirm_eliminar|"):
+                        try:
+                            _, codigo, mac = data.split("|")
+                            db.reference(f'usuarios/{codigo}/dispositivos_detectados/{mac}').delete()
+                            
+                            url_edit = f"https://api.telegram.org/bot{TOKEN_TELEGRAM}/editMessageText"
+                            requests.post(url_edit, data={
+                                "chat_id": chat_id,
+                                "message_id": message_id,
+                                "text": "🗑️ *Dispositivo eliminado correctamente de la base de datos.*",
+                                "parse_mode": "Markdown"
+                            })
+                        except Exception as e:
+                            print(f"Error confirmando eliminación: {e}")
+
+                    elif data.startswith("cancel_eliminar|"):
+                        try:
+                            url_edit = f"https://api.telegram.org/bot{TOKEN_TELEGRAM}/editMessageText"
+                            requests.post(url_edit, data={
+                                "chat_id": chat_id,
+                                "message_id": message_id,
+                                "text": "❌ *Operación cancelada.* El dispositivo no fue eliminado.",
+                                "parse_mode": "Markdown"
+                            })
+                        except Exception as e:
+                            print(f"Error al cancelar eliminación: {e}")
 
                     # B) Configuración de Frecuencia de Recordatorio
                     elif data.startswith("freq|"):
@@ -385,31 +449,29 @@ def procesar_updates_telegram():
                                         enviar_mensaje(chat_id, mensaje_pago, reply_markup=markup_pago)
                                         continue
                                 
-                                # SEPARACIÓN DE DISPOSITIVOS EN LISTA
+                                # LISTADO Y OPCIÓN DE GESTIÓN EN CADA DISPOSITIVO
                                 dispositivos = datos_usuario.get('dispositivos_detectados', {})
                                 
-                                bautizados = []
-                                pendientes = []
-                                
-                                for k, d in dispositivos.items():
-                                    mac_clean = k.replace('_', ':')
-                                    nombre = d.get('nombre_bautizado')
-                                    if nombre:
-                                        bautizados.append(f"✅ *{nombre}* (`{mac_clean}`)")
-                                    else:
-                                        ip = d.get('ip', 'IP no desc.')
-                                        fab = d.get('fabricante', 'Desconocido')
-                                        pendientes.append(f"⚠️ `{mac_clean}` - IP: {ip} ({fab})")
-                                
-                                msg_final = f"📋 *REPORTE DE RED (`{codigo}`)*\n\n"
-                                
-                                msg_final += "🟢 *Dispositivos Autorizados (Bautizados):*\n"
-                                msg_final += "\n".join(bautizados) if bautizados else "_Ninguno bautizado aún._"
-                                
-                                msg_final += "\n\n🟡 *Dispositivos Detectados Sin Nombre:*\n"
-                                msg_final += "\n".join(pendientes) if pendientes else "_No hay dispositivos pendientes._"
-                                
-                                enviar_mensaje(chat_id, msg_final)
+                                if not dispositivos:
+                                    enviar_mensaje(chat_id, f"📋 *REPORTE DE RED (`{codigo}`)*\n\n_No hay dispositivos registrados._")
+                                else:
+                                    enviar_mensaje(chat_id, f"📋 *REPORTE Y GESTIÓN DE RED (`{codigo}`)*\n\nPresioná *Eliminar* si querés borrar un equipo de Firebase:")
+                                    for mac, d in dispositivos.items():
+                                        mac_clean = mac.replace('_', ':')
+                                        nombre = d.get('nombre_bautizado')
+                                        ip = d.get('ip', 'IP desconocida')
+                                        
+                                        if nombre:
+                                            texto_disp = f"✅ *{nombre}*\n📍 IP: `{ip}` | MAC: `{mac_clean}`"
+                                        else:
+                                            fab = d.get('fabricante', 'Desconocido')
+                                            texto_disp = f"⚠️ *Sin Nombre* ({fab})\n📍 IP: `{ip}` | MAC: `{mac_clean}`"
+                                        
+                                        markup_disp = {"inline_keyboard": [[
+                                            {"text": "🗑️ Eliminar este dispositivo", "callback_data": f"pre_eliminar|{codigo}|{mac}"}
+                                        ]]}
+                                        enviar_mensaje(chat_id, texto_disp, reply_markup=markup_disp)
+                                        
                             except Exception as e:
                                 print(f"Error al traer lista de dispositivos: {e}")
                         else:
