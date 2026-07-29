@@ -6,7 +6,6 @@ from firebase_admin import db
 # Función auxiliar para consultar el fabricante según el OUI de la MAC
 def obtener_fabricante(mac):
     try:
-        # Petición a API pública OUI o tu librería local
         import requests
         res = requests.get(f"https://api.macvendors.com/{mac}", timeout=2)
         if res.status_code == 200:
@@ -28,11 +27,14 @@ def escanear_red(codigo):
         
         ref_dispositivos = db.reference(f'usuarios/{codigo}/dispositivos_detectados')
         
+        # Recopilamos todas las MACs que respondieron activamente al ARP en este ciclo
+        macs_vivas_en_red = set()
+
         for enviado, recibido in resultado:
             ip = recibido.psrc
             mac_raw = recibido.hwsrc
-            # Normalizamos la MAC para usarla de clave válida en Firebase (ej: 00_11_22_33_44_55)
             mac_key = mac_raw.replace(":", "_").lower()
+            macs_vivas_en_red.add(mac_key)
             
             disp_ref = ref_dispositivos.child(mac_key)
             disp_data = disp_ref.get()
@@ -43,23 +45,31 @@ def escanear_red(codigo):
                     'ip': ip,
                     'fabricante': obtener_fabricante(mac_raw),
                     'es_intruso': True,
-                    'nombre_bautizado': "",   # Queda vacío a la espera del bautismo
-                    'alerta_enviada': False,  # Permite al bot de Telegram saber que debe notificar
+                    'nombre_bautizado': "",
+                    'alerta_enviada': False,
                     'tipo': 'Desconocido'
                 }
                 disp_ref.set(info_disp)
-                
             else:
                 # CASO 2: Dispositivo ya existente en Firebase
-                updates = {'ip': ip} # Mantenemos actualizada la IP dinámica por si cambió
+                updates = {'ip': ip}
                 
-                # Si no fue bautizado aún o sigue marcado como intruso, nos aseguramos que mantenga su estado
                 if not disp_data.get('nombre_bautizado'):
                     updates['es_intruso'] = True
                 else:
                     updates['es_intruso'] = False
                 
                 disp_ref.update(updates)
+        
+        # --- LIMPIEZA DE DISPOSITIVOS FANTASMAS ---
+        # Verificamos los registros guardados en Firebase que NO respondieron al ARP actual
+        todos_registrados = ref_dispositivos.get()
+        if todos_registrados:
+            for mac_key_registrada in todos_registrados.keys():
+                # Si un equipo está en Firebase pero NO apareció en el escaneo ARP actual,
+                # significa que ya no está activo en la red local y se elimina para evitar "fantasmas".
+                if mac_key_registrada not in macs_vivas_en_red:
+                    ref_dispositivos.child(mac_key_registrada).delete()
                 
     except Exception as e:
         print(f"❌ Error en escaneo Npcap: {e}")
