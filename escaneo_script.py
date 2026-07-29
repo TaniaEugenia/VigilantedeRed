@@ -1,5 +1,6 @@
 import re
 import threading
+import time
 from scapy.all import Ether, ARP, srp, conf, get_if_addr
 from firebase_admin import db
 
@@ -73,3 +74,10 @@ def escanear_red(codigo):
                 
     except Exception as e:
         print(f"❌ Error en escaneo Npcap: {e}")
+
+# --- BUCLE DE EJECUCIÓN CONTINUA ---
+def iniciar_monitoreo(codigo, intervalo_segundos=30):
+    print(f"🚀 Iniciando monitoreo continuo para el usuario: {codigo} (Escaneando cada {intervalo_segundos}s)")
+    while True:
+        escanear_red(codigo)
+        time.sleep(intervalo_segundos)
