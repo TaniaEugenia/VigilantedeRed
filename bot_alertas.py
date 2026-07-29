@@ -37,22 +37,31 @@ def enviar_mensaje(chat_id, texto, reply_markup=None):
 # --- ESCUCHA EN TIEMPO REAL (ALERTAS DE DISPOSITIVOS) ---
 def escuchar_firebase():
     def callback(event):
-        if not event.data or not isinstance(event.data, dict): return
+        if not event.data or not isinstance(event.data, dict): 
+            return
         
         ahora_timestamp = datetime.datetime.now().timestamp()
 
-        for codigo, datos_usuario in event.data.items():
-            chat_id = datos_usuario.get('chat_id')
-            if not chat_id: continue
+        # Recorremos los datos que llegan de Firebase
+        for codigo, usuario_data in event.data.items():
+            if not isinstance(usuario_data, dict):
+                continue
             
-            dispositivos = datos_usuario.get('dispositivos_detectados', {})
+            dispositivos = usuario_data.get('dispositivos_detectados', {})
+            if not isinstance(dispositivos, dict):
+                continue
+
             for mac, disp in dispositivos.items():
-                
-                # Si ya tiene nombre bautizado, no requiere acción
-                if disp.get('nombre_bautizado'):
+                # Validación previa para evitar que crashee si disp no es un diccionario
+                if isinstance(disp, dict):
+                    chat_id = disp.get('chat_id')
+                else:
+                    print(f"Advertencia: El dispositivo no arrojó un diccionario válido. Valor actual: {disp}")
+                    chat_id = None  # Si el usuario eligió no recibir más avisos
+
+                if not chat_id:
                     continue
-                
-                # Si el usuario eligió no recibir más avisos
+
                 if disp.get('silenciado'):
                     continue
 
