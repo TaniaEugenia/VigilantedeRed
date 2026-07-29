@@ -52,12 +52,11 @@ def escuchar_firebase():
                 continue
 
             for mac, disp in dispositivos.items():
-                # Validación previa para evitar que crashee si disp no es un diccionario
                 if isinstance(disp, dict):
                     chat_id = disp.get('chat_id')
                 else:
                     print(f"Advertencia: El dispositivo no arrojó un diccionario válido. Valor actual: {disp}")
-                    chat_id = None  # Si el usuario eligió no recibir más avisos
+                    chat_id = None 
 
                 if not chat_id:
                     continue
@@ -306,10 +305,10 @@ def procesar_updates_telegram():
                             enviar_mensaje(chat_id, "✅ *Aviso recibido.* Estamos verificando tu pago en el sistema. Recordá que la activación puede demorar hasta 24 hs. ¡Muchas gracias!")
                             
                             mensaje_admin = (f"💰 *¡ALERTA DE PAGO A VERIFICAR!*\n\n"
-                                             f"👤 *Usuario (Chat ID):* `{chat_id}`\n"
-                                             f"🔑 *Código Red:* `{codigo_usuario}`\n"
-                                             f"⏳ *Plan solicitado:* {horas} horas.\n\n"
-                                             f"Revisá tu Mercado Pago. Si el dinero ingresó, aprobalo acá abajo:")
+                                           f"👤 *Usuario (Chat ID):* `{chat_id}`\n"
+                                           f"🔑 *Código Red:* `{codigo_usuario}`\n"
+                                           f"⏳ *Plan solicitado:* {horas} horas.\n\n"
+                                           f"Revisá tu Mercado Pago. Si el dinero ingresó, aprobalo acá abajo:")
                             
                             markup_admin = {"inline_keyboard": [
                                 [{"text": "✅ Aprobar y Activar Servicio", "callback_data": f"aprobar_{horas}_{codigo_usuario}_{chat_id}"}],
@@ -359,8 +358,8 @@ def procesar_updates_telegram():
                             requests.post(url_edit, data=payload_edit)
                             
                             texto_cliente = (f"🚀 *¡Tu pago fue verificado e ingresado al sistema!* \n\n"
-                                             f"Tu red `{codigo_usuario}` ya se encuentra *ACTIVA*.\n"
-                                             f"Protección válida hasta el: `{nueva_fecha_venc.strftime('%d/%m/%Y %H:%M:%S')}`.")
+                                           f"Tu red `{codigo_usuario}` ya se encuentra *ACTIVA*.\n"
+                                           f"Protección válida hasta el: `{nueva_fecha_venc.strftime('%d/%m/%Y %H:%M:%S')}`.")
                             enviar_mensaje(chat_cliente, texto_cliente)
                         except Exception as e:
                             print(f"Error en aprobación del administrador: {e}")
@@ -383,8 +382,21 @@ def procesar_updates_telegram():
                     msg = update["message"]
                     chat_id, texto = msg["chat"]["id"], msg["text"]
                     
-                    # Comando /start
-                    if texto.startswith("/start"):
+                    # 1️⃣ PRIORIDAD MÁXIMA: Capturar texto para bautizar dispositivos
+                    if chat_id in esperando_nombre:
+                        try:
+                            codigo, mac = esperando_nombre.pop(chat_id)
+                            db.reference(f'usuarios/{codigo}/dispositivos_detectados/{mac}').update({
+                                'nombre_bautizado': texto, 
+                                'es_intruso': False
+                            })
+                            enviar_mensaje(chat_id, f"✅ Dispositivo \"{texto}\" bautizado y autorizado correctamente.")
+                        except Exception as e:
+                            print(f"Error guardando bautismo: {e}")
+                            enviar_mensaje(chat_id, "❌ Hubo un problema al guardar el nombre.")
+                    
+                    # 2️⃣ Comando /start
+                    elif texto.startswith("/start"):
                         if chat_id in esperando_nombre:
                             esperando_nombre.pop(chat_id)
                             
@@ -405,7 +417,7 @@ def procesar_updates_telegram():
                         else:
                             enviar_mensaje(chat_id, "⚠️ Por favor ingresá el código. Ejemplo: `/start TU_CODIGO`")
                     
-                    # Comando /milista
+                    # 3️⃣ Comando /milista
                     elif texto.startswith("/milista"):
                         codigo = usuario_vinculado.get(chat_id)
                         
@@ -458,7 +470,6 @@ def procesar_updates_telegram():
                                         enviar_mensaje(chat_id, mensaje_pago, reply_markup=markup_pago)
                                         continue
                                 
-                                # LISTADO Y OPCIÓN DE GESTIÓN EN CADA DISPOSITIVO
                                 dispositivos = datos_usuario.get('dispositivos_detectados', {})
                                 
                                 if not dispositivos:
@@ -486,19 +497,6 @@ def procesar_updates_telegram():
                         else:
                             enviar_mensaje(chat_id, "❌ No encontré ninguna red vinculada. Usá `/start TU_CODIGO` primero.")
                     
-                    # Captura de textos para Bautismos
-                    elif chat_id in esperando_nombre:
-                        try:
-                            codigo, mac = esperando_nombre.pop(chat_id)
-                            db.reference(f'usuarios/{codigo}/dispositivos_detectados/{mac}').update({
-                                'nombre_bautizado': texto, 
-                                'es_intruso': False
-                            })
-                            enviar_mensaje(chat_id, f"✅ Dispositivo \"{texto}\" bautizado y autorizado correctamente.")
-                        except Exception as e:
-                            print(f"Error guardando bautismo: {e}")
-                            enviar_mensaje(chat_id, "❌ Hubo un problema al guardar el nombre.")
-                            
         time.sleep(1)
 
 if __name__ == "__main__":

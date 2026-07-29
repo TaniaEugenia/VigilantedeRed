@@ -28,20 +28,33 @@ def escanear_red(codigo):
         
         ref_dispositivos = db.reference(f'usuarios/{codigo}/dispositivos_detectados')
         
-        # Recopilamos todas las MACs que respondieron activamente al ARP en este ciclo
-        macs_vivas_en_red = set()
+        # Traemos todos los registros actuales de Firebase de una sola vez para fusionar y evitar fantasmas
+        registros_actuales = ref_dispositivos.get() or {}
+        
+        # Armamos el nuevo diccionario limpio que reemplazará la foto actual en Firebase
+        nuevo_estado_red = {}
 
         for enviado, recibido in resultado:
             ip = recibido.psrc
             mac_raw = recibido.hwsrc
             mac_key = mac_raw.replace(":", "_").lower()
-            macs_vivas_en_red.add(mac_key)
             
-            disp_ref = ref_dispositivos.child(mac_key)
-            disp_data = disp_ref.get()
-            
-            if not disp_data:
-                # CASO 1: Dispositivo totalmente nuevo detectado en la red
+            # Verificamos si ya existía previamente en la base de datos
+            if mac_key in registros_actuales:
+                disp_data = registros_actuales[mac_key]
+                nombre_bautizado = disp_data.get('nombre_bautizado', "")
+                es_intruso = False if nombre_bautizado else True
+                
+                info_disp = {
+                    'ip': ip,
+                    'fabricante': disp_data.get('fabricante', obtener_fabricante(mac_raw)),
+                    'es_intruso': es_intruso,
+                    'nombre_bautizado': nombre_bautizado,
+                    'alerta_enviada': disp_data.get('alerta_enviada', False),
+                    'tipo': disp_data.get('tipo', 'Desconocido')
+                }
+            else:
+                # Dispositivo totalmente nuevo detectado en la red
                 info_disp = {
                     'ip': ip,
                     'fabricante': obtener_fabricante(mac_raw),
@@ -50,28 +63,15 @@ def escanear_red(codigo):
                     'alerta_enviada': False,
                     'tipo': 'Desconocido'
                 }
-                disp_ref.set(info_disp)
-            else:
-                # CASO 2: Dispositivo ya existente en Firebase
-                updates = {'ip': ip}
-                
-                if not disp_data.get('nombre_bautizado'):
-                    updates['es_intruso'] = True
-                else:
-                    updates['es_intruso'] = False
-                
-                disp_ref.update(updates)
+            
+            # Agregamos al diccionario limpio del ciclo actual
+            nuevo_estado_red[mac_key] = info_disp
         
-        # --- LIMPIEZA DE DISPOSITIVOS FANTASMAS ---
-        # Verificamos los registros guardados en Firebase que NO respondieron al ARP actual
-        todos_registrados = ref_dispositivos.get()
-        if todos_registrados:
-            for mac_key_registrada in todos_registrados.keys():
-                # Si un equipo está en Firebase pero NO apareció en el escaneo ARP actual,
-                # significa que ya no está activo en la red local y se elimina para evitar "fantasmas".
-                if mac_key_registrada not in macs_vivas_en_red:
-                    ref_dispositivos.child(mac_key_registrada).delete()
-                
+        # --- APLICACIÓN DE LA FOTO ACTUAL (LIMPIEZA DE FANTASMAS Y RESGUARDO DE BAUTIZADOS) ---
+        # Pisamos directamente el nodo. Todo lo que no respondió al ARP de este ciclo se borra automáticamente,
+        # pero conservamos intactos los nombres de los dispositivos que siguen conectados físicamente.
+        ref_dispositivos.set(nuevo_estado_red)
+        
     except Exception as e:
         print(f"❌ Error en escaneo Npcap: {e}")
 
