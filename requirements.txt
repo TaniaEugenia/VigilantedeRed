@@ -2,3 +2,4 @@ streamlit
 firebase-admin
 requests
 pyTelegramBotAPI
+python-dotenv

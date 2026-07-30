@@ -3,3 +3,4 @@ serviceAccountKey.json
 __pycache__/
 *.toml
 mi-panel-vigilante/firebase_keys.json
+*.env

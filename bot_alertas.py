@@ -8,7 +8,7 @@ import datetime
 from firebase_admin import credentials, db
 
 # --- CONFIGURACIÓN DE TOKENS Y CRITICAL DATA ---
-TOKEN_TELEGRAM = '8709241753:AAGBhWXccYJBoP4BQrCbFgeO-YmuyEDGv30'
+TOKEN_TELEGRAM = os.getenv("TOKEN_TELEGRAM")
 MI_CHAT_ID_PERSONAL = 8640928982
 
 # Inicializar Firebase
