@@ -6,10 +6,17 @@ import os
 import json
 import datetime
 from firebase_admin import credentials, db
+from dotenv import load_dotenv  # <--- 1. AGREGÁS ESTA LÍNEA
+
+# --- CARGAR VARIABLES DE ENTORNO ---
+load_dotenv()  # <--- 2. AGREGÁS ESTA LÍNEA (Lee el archivo .env automáticamente)
 
 # --- CONFIGURACIÓN DE TOKENS Y CRITICAL DATA ---
 TOKEN_TELEGRAM = os.getenv("TOKEN_TELEGRAM")
 MI_CHAT_ID_PERSONAL = 8640928982
+
+# Un print rápido para confirmar en la consola que lo leyó:
+print(f"Token cargado correctamente: {bool(TOKEN_TELEGRAM)}")
 
 # Inicializar Firebase
 cred_json = json.loads(os.getenv("FIREBASE_CREDENTIALS"))
