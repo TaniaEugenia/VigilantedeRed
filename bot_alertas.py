@@ -6,16 +6,15 @@ import os
 import json
 import datetime
 from firebase_admin import credentials, db
-from dotenv import load_dotenv  # <--- 1. AGREGÁS ESTA LÍNEA
+from dotenv import load_dotenv
 
 # --- CARGAR VARIABLES DE ENTORNO ---
-load_dotenv()  # <--- 2. AGREGÁS ESTA LÍNEA (Lee el archivo .env automáticamente)
+load_dotenv()
 
 # --- CONFIGURACIÓN DE TOKENS Y CRITICAL DATA ---
 TOKEN_TELEGRAM = os.getenv("TOKEN_TELEGRAM")
 MI_CHAT_ID_PERSONAL = 8640928982
 
-# Un print rápido para confirmar en la consola que lo leyó:
 print(f"Token cargado correctamente: {bool(TOKEN_TELEGRAM)}")
 
 # Inicializar Firebase
@@ -54,16 +53,18 @@ def escuchar_firebase():
             if not isinstance(usuario_data, dict):
                 continue
             
+            # Prioriza el chat_id del nodo padre si no existe dentro del dispositivo
+            chat_id_padre = usuario_data.get('chat_id')
             dispositivos = usuario_data.get('dispositivos_detectados', {})
+            
             if not isinstance(dispositivos, dict):
                 continue
 
             for mac, disp in dispositivos.items():
                 if isinstance(disp, dict):
-                    chat_id = disp.get('chat_id')
+                    chat_id = disp.get('chat_id') or chat_id_padre
                 else:
-                    print(f"Advertencia: El dispositivo no arrojó un diccionario válido. Valor actual: {disp}")
-                    chat_id = None 
+                    chat_id = chat_id_padre
 
                 if not chat_id:
                     continue

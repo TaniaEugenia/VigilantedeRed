@@ -15,7 +15,7 @@ def obtener_fabricante(mac):
         pass
     return "Desconocido"
 
-# --- ESCANEO OPTIMIZADO CON SEPARACIÓN DE NODOS ---
+# --- ESCANEO OPTIMIZADO SOBRE DISPOSITIVOS_DETECTADOS ---
 def escanear_red(codigo):
     try:
         # 1. Obtener interfaz local y armar rango /24
@@ -26,14 +26,13 @@ def escanear_red(codigo):
         paquete = Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=rango_red)
         resultado, _ = srp(paquete, timeout=2, verbose=False)
         
-        # Referencias en Firebase
+        # Referencia al usuario en Firebase
         ref_usuario = db.reference(f'usuarios/{codigo}')
-        ref_registrados = ref_usuario.child('dispositivos_registrados')
-        ref_intrusos = ref_usuario.child('intrusos')
         
-        # Leemos los datos actuales
-        registrados_actuales = ref_registrados.get() or {}
-        intrusos_actuales = ref_intrusos.get() or {}
+        # Lectura de los datos actuales
+        datos_usuario = ref_usuario.get() or {}
+        chat_id_usuario = datos_usuario.get('chat_id')
+        dispositivos_actuales = datos_usuario.get('dispositivos_detectados', {})
         
         # MACs detectadas en la ráfaga actual
         macs_detectadas_hoy = set()
@@ -44,37 +43,40 @@ def escanear_red(codigo):
             mac_key = mac_raw.replace(":", "_").lower()
             macs_detectadas_hoy.add(mac_key)
             
-            # CASO A: Es un dispositivo registrado/bautizado
-            if mac_key in registrados_actuales:
-                # Solo actualizamos la IP por si cambió en el DHCP, sin tocar alertas
-                ref_registrados.child(f"{mac_key}/ip").set(ip)
+            # CASO A: Dispositivo ya existente en el nodo
+            if mac_key in dispositivos_actuales:
+                disp_info = dispositivos_actuales[mac_key]
+                alerta_previa = disp_info.get('alerta_enviada', False)
+                segundo_aviso = disp_info.get('segundo_aviso_enviado', False)
+                
+                # Actualizamos la IP y estado activo, preservando los flags y el chat_id
+                ref_usuario.child(f'dispositivos_detectados/{mac_key}').update({
+                    'ip': ip,
+                    'activo': True,
+                    'chat_id': chat_id_usuario,
+                    'alerta_enviada': alerta_previa,
+                    'segundo_aviso_enviado': segundo_aviso
+                })
             
-            # CASO B: Es un dispositivo no registrado (Intruso potencial)
+            # CASO B: Dispositivo totalmente NUEVO / Intruso potencial
             else:
-                if mac_key in intrusos_actuales:
-                    # Ya estaba como intruso: preservamos 'alerta_enviada' para NO re-notificar
-                    alerta_previa = intrusos_actuales[mac_key].get('alerta_enviada', False)
-                    ref_intrusos.child(mac_key).update({
-                        'ip': ip,
-                        'activo': True,
-                        'alerta_enviada': alerta_previa
-                    })
-                else:
-                    # Intruso totalmente NUEVO: creamos el registro con alerta_enviada = False
-                    ref_intrusos.child(mac_key).set({
-                        'ip': ip,
-                        'mac': mac_raw,
-                        'fabricante': obtener_fabricante(mac_raw),
-                        'activo': True,
-                        'alerta_enviada': False,
-                        'timestamp': time.time()
-                    })
+                ref_usuario.child(f'dispositivos_detectados/{mac_key}').set({
+                    'ip': ip,
+                    'mac': mac_raw,
+                    'fabricante': obtener_fabricante(mac_raw),
+                    'activo': True,
+                    'alerta_enviada': False,
+                    'segundo_aviso_enviado': False,
+                    'es_intruso': True,
+                    'chat_id': chat_id_usuario,
+                    'timestamp': time.time()
+                })
 
-        # --- LIMPIEZA DE INTRUSOS QUE SE DESCONECTARON ---
-        # Si un intruso ya no responde al escaneo ARP, lo removemos de Firebase
-        for mac_k, datos in list(intrusos_actuales.items()):
-            if mac_k not in macs_detectadas_hoy:
-                ref_intrusos.child(mac_k).delete()
+        # --- LIMPIEZA DE INTRUSOS DESCONECTADOS ---
+        # Solo se eliminan los dispositivos NO bautizados (intrusos) que ya no respondan al ARP
+        for mac_k, datos in list(dispositivos_actuales.items()):
+            if mac_k not in macs_detectadas_hoy and datos.get('es_intruso', True):
+                ref_usuario.child(f'dispositivos_detectados/{mac_k}').delete()
 
     except Exception as e:
         print(f"❌ Error en escaneo Npcap: {e}")
