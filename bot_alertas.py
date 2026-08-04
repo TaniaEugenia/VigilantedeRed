@@ -403,7 +403,33 @@ def procesar_updates_telegram():
                             print(f"Error guardando bautismo: {e}")
                             enviar_mensaje(chat_id, "❌ Hubo un problema al guardar el nombre.")
                     
-                    # 2️⃣ Comando /start
+                    # 2️⃣ Comando /comunicado (COMUNICADO MASIVO DEL ADMINISTRADOR)
+                    elif texto.startswith("/comunicado"):
+                        if str(chat_id) != str(MI_CHAT_ID_PERSONAL):
+                            enviar_mensaje(chat_id, "⛔ No tenés permisos para ejecutar este comando.")
+                        else:
+                            mensaje_difusion = texto.replace("/comunicado", "").strip()
+                            if not mensaje_difusion:
+                                enviar_mensaje(chat_id, "⚠️ Escribí el texto a enviar. Ejemplo:\n`/comunicado Hola a todos, hay una nueva actualización.`")
+                            else:
+                                try:
+                                    usuarios_db = db.reference('usuarios').get() or {}
+                                    chats_notificados = set()
+                                    contador = 0
+                                    
+                                    for cod, datos in usuarios_db.items():
+                                        cid = datos.get('chat_id')
+                                        if cid and cid not in chats_notificados:
+                                            enviar_mensaje(cid, mensaje_difusion)
+                                            chats_notificados.add(cid)
+                                            contador += 1
+                                            
+                                    enviar_mensaje(chat_id, f"📢 *Comunicado masivo enviado con éxito a {contador} usuarios.*")
+                                except Exception as e:
+                                    print(f"Error al enviar comunicado masivo: {e}")
+                                    enviar_mensaje(chat_id, "❌ Error al intentar enviar el comunicado.")
+
+                    # 3️⃣ Comando /start
                     elif texto.startswith("/start"):
                         if chat_id in esperando_nombre:
                             esperando_nombre.pop(chat_id)
@@ -425,7 +451,7 @@ def procesar_updates_telegram():
                         else:
                             enviar_mensaje(chat_id, "⚠️ Por favor ingresá el código. Ejemplo: `/start TU_CODIGO`")
                     
-                    # 3️⃣ Comando /milista
+                    # 4️⃣ Comando /milista
                     elif texto.startswith("/milista"):
                         codigo = usuario_vinculado.get(chat_id)
                         
