@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, redirect
 from flask_cors import CORS
 import firebase_admin
 from firebase_admin import credentials, db
@@ -37,7 +37,6 @@ def obtener_y_verificar_usuario(codigo):
     ref = db.reference(f'usuarios/{codigo}')
     usuario_data = ref.get()
     
-    # Si el código no existe en la base de datos, retornamos None limpiamente
     if not usuario_data or not isinstance(usuario_data, dict):
         return None
         
@@ -81,6 +80,12 @@ def guia():
 @app.route('/terminos.html')
 def terminos():
     return send_from_directory('.', 'terminos.html')
+
+# RUTA PARA REDIRIGIR A LA DESCARGA DEL EXE
+@app.route('/descargar-exe')
+def descargar_exe():
+    link_directo = "https://drive.google.com/uc?export=download&id=1oiIu_Ot_aGWmJAkPHHqvfDiQMLnPLFF7&confirm=no_antivirus"
+    return redirect(link_directo)
 
 @app.route('/api/usuario/<codigo>', methods=['GET'])
 def get_usuario(codigo):
