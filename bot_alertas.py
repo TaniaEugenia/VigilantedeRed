@@ -72,6 +72,10 @@ def escuchar_firebase():
                 if disp.get('silenciado'):
                     continue
 
+                # 🛑 CHEQUEO CLAVE: Si el dispositivo ya fue nombrado/bautizado, ignorar alertas
+                if disp.get('nombre_bautizado'):
+                    continue
+
                 alerta_enviada = disp.get('alerta_enviada', False)
                 segundo_aviso_enviado = disp.get('segundo_aviso_enviado', False)
                 intervalo_hs = disp.get('intervalo_recordatorio_hs')
@@ -111,9 +115,9 @@ def escuchar_firebase():
                     })
 
                 # -------------------------------------------------------------
-                # CASO 2: SEGUNDO ESCANEO (Sigue sin nombre -> Preguntar horario/silenciar)
+                # CASO 2: SEGUNDO ESCANEO (Verifica que continúe SIN NOMBRE)
                 # -------------------------------------------------------------
-                elif alerta_enviada and not segundo_aviso_enviado and intervalo_hs is None:
+                elif alerta_enviada and not segundo_aviso_enviado and intervalo_hs is None and not disp.get('nombre_bautizado'):
                     mensaje = (
                         f"⏳ *EL DISPOSITIVO SIGUE SIN NOMBRE* ⏳\n\n"
                         f"📍 *IP:* `{disp.get('ip', 'Desconocida')}`\n"
@@ -141,9 +145,9 @@ def escuchar_firebase():
                     })
 
                 # -------------------------------------------------------------
-                # CASO 3: RECORDATORIOS POSTERIORES (Si eligió un intervalo de horas)
+                # CASO 3: RECORDATORIOS POSTERIORES (Verifica que siga SIN NOMBRE)
                 # -------------------------------------------------------------
-                elif intervalo_hs and (ahora_timestamp - ultima_alerta_ts) >= (intervalo_hs * 3600):
+                elif intervalo_hs and (ahora_timestamp - ultima_alerta_ts) >= (intervalo_hs * 3600) and not disp.get('nombre_bautizado'):
                     mensaje = (
                         f"🔔 *RECORDATORIO DE DISPOSITIVO* 🔔\n\n"
                         f"📍 *IP:* `{disp.get('ip', 'Desconocida')}`\n"
@@ -493,8 +497,8 @@ def procesar_updates_telegram():
                                         mensaje_pago = (f"⚠️ *¡Tu tiempo de protección ha vencido!* (Red `{codigo}`)\n\n"
                                                         f"El escaneo automático se encuentra pausado.\n\n"
                                                         f"1️⃣ *Aboná el plan que prefieras aquí:*\n"
-                                                        f"🔗 [Pagar 24 Horas Extra - $10.000](https://mpago.la/1NqWsQf)\n"
-                                                        f"🔗 [Pagar 30 Días / 720hs - $20.000](https://mpago.la/2N8NvtF)\n\n"
+                                                        f"🔗 [Pagar 24 Horas Extra - $5.000](https://mpago.la/2ZN6zhm)\n"
+                                                        f"🔗 [Pagar 30 Días / 720hs - $10.000](https://mpago.li/32hWc3Q)\n\n"
                                                         f"2️⃣ *Una vez realizado el pago, presiona abajo:*")
                                         
                                         markup_pago = {"inline_keyboard": [
